@@ -1,16 +1,24 @@
+using GitHubActionsDemo.Services;
+
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddSingleton<OrderService>();
 
 var app = builder.Build();
 
-app.MapGet("/", () => "Hello from GitHub Actions!");
+app.MapGet("/", () => "GitHub Actions Demo API");
 
-app.MapGet("/api/hello", () =>
+app.MapGet("/api/order/total", (decimal price, int quantity, decimal discountPercent) =>
 {
-    return new
-    {
-        Message = "Hello World",
-        Service = "GitHubActionsDemo"
-    };
+    var orderService = app.Services.GetRequiredService<OrderService>();
+
+    var result = orderService.CalculateTotal(
+        price,
+        quantity,
+        discountPercent);
+
+    return Results.Ok(result);
+
 });
 
 app.Run();
