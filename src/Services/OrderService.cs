@@ -25,9 +25,9 @@ public class OrderService
 
         var amountAfterDiscount = subtotal - discountAmount;
 
-        var taxAmount = amountAfterDiscount / TaxRate;
+        var taxAmount = amountAfterDiscount * TaxRate;
 
-        var total = amountAfterDiscount - taxAmount;
+        var total = amountAfterDiscount + taxAmount;
 
         return new OrderCalculation(
             Subtotal: subtotal,
