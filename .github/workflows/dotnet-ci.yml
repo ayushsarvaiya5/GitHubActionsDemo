@@ -26,11 +26,11 @@ jobs:
 
       - name: Restore dependencies
         run: |
-          dotnet restore GitHubActionsDemo.csproj
-          dotnet restore GitHubActionsDemo.Tests/GitHubActionsDemo.Tests.csproj
+          dotnet restore src/GitHubActionsDemo.csproj
+          dotnet restore tests/GitHubActionsDemo.Tests.csproj
 
       - name: Build
-        run: dotnet build GitHubActionsDemo.csproj --no-restore --configuration Release
+        run: dotnet build src/GitHubActionsDemo.csproj --no-restore --configuration Release
 
       - name: Run tests
-        run: dotnet test GitHubActionsDemo.Tests/GitHubActionsDemo.Tests.csproj --no-restore --configuration Release
+        run: dotnet test tests/GitHubActionsDemo.Tests.csproj --no-restore --configuration Release
