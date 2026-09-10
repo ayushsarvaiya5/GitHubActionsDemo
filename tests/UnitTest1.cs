@@ -1,10 +1,12 @@
 ﻿namespace GitHubActionsDemo.Tests;
 
-public class UnitTest1
+public class CalculatorTests
 {
     [Fact]
-    public void Test1()
+    public void Add_TwoNumbers_ReturnsCorrectResult()
     {
+        var result = 10 + 20;
 
+        Assert.Equal(20, result);
     }
 }
