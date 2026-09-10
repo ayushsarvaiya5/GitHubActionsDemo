@@ -1,4 +1,5 @@
-﻿namespace GitHubActionsDemo.Tests;
+﻿using Xunit;
+namespace GitHubActionsDemo.Tests;
 
 public class CalculatorTests
 {
