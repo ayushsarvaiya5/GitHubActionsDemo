@@ -12,8 +12,7 @@ COPY src/ src/
 
 RUN dotnet publish src/GitHubActionsDemo.csproj \
     -c Release \
-    -o /app/publish \
-    --no-restore
+    -o /app/publish
 
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
