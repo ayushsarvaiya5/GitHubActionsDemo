@@ -3,7 +3,6 @@ name: .NET CI
 on:
   pull_request:
     branches:
-      - main
       - feature/*
 
 jobs:
