@@ -6,7 +6,37 @@ on:
       - main
 
 jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Show branch information
+        run: |
+          echo "Source: ${{ github.head_ref }}"
+          echo "Target: ${{ github.base_ref }}"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: |
+          dotnet restore src/GitHubActionsDemo.csproj
+          dotnet restore tests/GitHubActionsDemo.Tests.csproj
+
+      - name: Run tests
+        run: dotnet test tests/GitHubActionsDemo.Tests.csproj --no-restore --configuration Release
+
+      - name: Build
+        run: dotnet build src/GitHubActionsDemo.csproj --no-restore --configuration Release
+
   build-and-push:
+    needs: build
+    
     runs-on: ubuntu-24.04
 
     steps:
