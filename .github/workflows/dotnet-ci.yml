@@ -8,13 +8,18 @@ on:
   pull_request:
     branches:
       - main
+      - feature/*
 
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
+      - name: Show branch information
+        run: |
+          echo "Source: ${{ github.head_ref }}"
+          echo "Target: ${{ github.base_ref }}"
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -29,8 +34,8 @@ jobs:
           dotnet restore src/GitHubActionsDemo.csproj
           dotnet restore tests/GitHubActionsDemo.Tests.csproj
 
-      - name: Build
-        run: dotnet build src/GitHubActionsDemo.csproj --no-restore --configuration Release
-
       - name: Run tests
         run: dotnet test tests/GitHubActionsDemo.Tests.csproj --no-restore --configuration Release
+
+      - name: Build
+        run: dotnet build src/GitHubActionsDemo.csproj --no-restore --configuration Release

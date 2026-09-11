@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("GitHubActionsDemo")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1fa6ff368e52e23dc07468348d921871f5b90971")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2475939b6e404fcc5c6e0337f9a47209db04e9be")]
 [assembly: System.Reflection.AssemblyProductAttribute("GitHubActionsDemo")]
 [assembly: System.Reflection.AssemblyTitleAttribute("GitHubActionsDemo")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
