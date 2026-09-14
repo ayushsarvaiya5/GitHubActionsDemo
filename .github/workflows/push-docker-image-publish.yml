@@ -1,19 +1,21 @@
 name: Docker Image Publish
 
 on:
-  pull_request:
+  push:
     branches:
       - main
+      - feature/*
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-24.04
 
     steps:
       - name: Show branch information
         run: |
-          echo "Source: ${{ github.head_ref }}"
-          echo "Target: ${{ github.base_ref }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Full ref: ${{ github.ref }}"
+          echo "Commit: ${{ github.sha }}"
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -22,6 +24,14 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+      
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/packages.lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
 
       - name: Restore dependencies
         run: |
@@ -34,9 +44,10 @@ jobs:
       - name: Build
         run: dotnet build src/GitHubActionsDemo.csproj --no-restore --configuration Release
 
-  build-and-push:
-    needs: build
-    
+  push-docker-image:
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main'
+
     runs-on: ubuntu-24.04
 
     steps:
@@ -60,3 +71,5 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/githubactionsdemo:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/githubactionsdemo:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
