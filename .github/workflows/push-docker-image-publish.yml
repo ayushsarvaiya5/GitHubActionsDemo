@@ -1,13 +1,10 @@
 name: Docker Image Publish
 
 on:
-  pull_request:
-    branches:
-      - main
-
   push:
     branches:
       - main
+      - feature/*
 
 jobs:
   build-and-test:
@@ -16,8 +13,9 @@ jobs:
     steps:
       - name: Show branch information
         run: |
-          echo "Source: ${{ github.head_ref }}"
-          echo "Target: ${{ github.base_ref }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Full ref: ${{ github.ref }}"
+          echo "Commit: ${{ github.sha }}"
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -48,7 +46,7 @@ jobs:
 
   push-docker-image:
     needs: build-and-test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main'
 
     runs-on: ubuntu-24.04
 
