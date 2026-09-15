@@ -64,7 +64,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
+        
+      - name: Check Docker
+        run: |
+          docker version
+          docker info
+          docker buildx version
+          docker buildx ls
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
