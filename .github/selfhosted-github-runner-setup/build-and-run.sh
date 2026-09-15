@@ -54,6 +54,20 @@ if [ ! -f "$DOCKERFILE" ]; then
 fi
 
 # ==================================================
+# Check Docker Socket
+# ==================================================
+
+if [ ! -S /var/run/docker.sock ]; then
+    echo "ERROR: Docker socket not found."
+    echo "Expected: /var/run/docker.sock"
+    exit 1
+fi
+
+DOCKER_GID=$(stat -c '%g' /var/run/docker.sock)
+
+echo "Docker Socket GID : $DOCKER_GID"
+
+# ==================================================
 # Check Docker Image
 # ==================================================
 
@@ -123,5 +137,6 @@ docker run \
     -it \
     --name "$CONTAINER_NAME" \
     --env-file "$ENV_FILE" \
+    --group-add "$DOCKER_GID" \
     -v /var/run/docker.sock:/var/run/docker.sock \
     "$IMAGE"
