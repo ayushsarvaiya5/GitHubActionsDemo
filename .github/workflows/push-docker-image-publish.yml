@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: [sansar-runner]
+    runs-on: [self-hosted, Linux, X64, GitHubActionsDemo-runner]
 
     steps:
       - name: Show branch information
@@ -48,7 +48,7 @@ jobs:
     needs: build-and-test
     if: github.ref == 'refs/heads/main'
 
-    runs-on: [sansar-runner]
+    runs-on: [self-hosted, Linux, X64, GitHubActionsDemo-runner]
 
     steps:
       - name: Checkout repository
