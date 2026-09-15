@@ -224,6 +224,24 @@ Required GitHub secrets:
 - DOCKERHUB_USERNAME
 - DOCKERHUB_TOKEN
 
+### How to generate and store these secrets
+
+1. Log in to Docker Hub and create a Docker account if needed.
+2. Generate a Docker Hub access token:
+   - Open Docker Hub
+   - Go to Account Settings -> Security
+   - Click New Access Token
+   - Give it a name such as GitHubActionsDemo
+   - Copy the generated token
+3. In GitHub, open your repository.
+4. Go to Settings -> Secrets and variables -> Actions.
+5. Click New repository secret.
+6. Add the following values:
+   - Name: `DOCKERHUB_USERNAME`  Value: your Docker Hub username
+   - Name: `DOCKERHUB_TOKEN`  Value: the generated Docker Hub access token
+
+Store these secrets at the repository level (or organization level if you manage shared secrets). They are used by the workflow in `.github/workflows/push-docker-image-publish.yml` to authenticate and push the Docker image.
+
 This is the core demonstration of the repository: GitHub Actions as the automation layer for a .NET app.
 
 ## Self-Hosted GitHub Runner Setup
