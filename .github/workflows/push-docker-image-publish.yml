@@ -7,13 +7,8 @@ on:
       - feature/*
 
 jobs:
-  test-and-build:
-
-    # Run on a self-hosted runner
-    runs-on: [self-hosted, Linux, X64, GitHubActionsDemo-runner]
-
-    # If you want to run on a GitHub-hosted runner, uncomment the following line and comment out the above line.
-    # runs-on: ubuntu-24.04
+  build-and-test:
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Show branch information
@@ -25,12 +20,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Setup .NET : If you are not using a self-hosted runner with .NET pre-installed, uncomment the following lines to set up .NET SDK.
-
-      # - name: Setup .NET
-      #   uses: actions/setup-dotnet@v4
-      #   with:
-      #     dotnet-version: '10.0.x'
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
       
       - name: Cache NuGet packages
         uses: actions/cache@v4
@@ -52,14 +45,10 @@ jobs:
         run: dotnet build src/GitHubActionsDemo.csproj --no-restore --configuration Release
 
   push-docker-image:
-    needs: test-and-build
+    needs: build-and-test
     if: github.ref == 'refs/heads/main'
 
-    # Run on a self-hosted runner
-    runs-on: [self-hosted, Linux, X64, GitHubActionsDemo-runner]
-
-    # If you want to run on a GitHub-hosted runner, uncomment the following line and comment out the above line.
-    # runs-on: ubuntu-24.04
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout repository
