@@ -66,7 +66,23 @@ else
 fi
 
 # --------------------------------------------------
-# Extract runner
+# Validate the hash of the downloaded runner package
+# --------------------------------------------------
+
+if [ -f "$RUNNER_PACKAGE" ]; then
+    echo "Validating runner package hash..."
+
+    EXPECTED_HASH=$(curl -sL "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/SHA256SUMS" | grep "${RUNNER_PACKAGE}" | cut -d ' ' -f 1)
+    ACTUAL_HASH=$(shasum -a 256 "${RUNNER_PACKAGE}" | cut -d ' ' -f 1)
+
+    if [ "${EXPECTED_HASH}" != "${ACTUAL_HASH}" ]; then
+        echo "ERROR: Hash mismatch for ${RUNNER_PACKAGE}"
+        exit 1
+    fi
+fi
+
+# --------------------------------------------------
+# Extract runner from the package
 # --------------------------------------------------
 
 if [ ! -f "./config.sh" ]; then

@@ -1,4 +1,4 @@
-name: .NET CI
+name: PR Request Workflow
 
 on:
   pull_request:
@@ -8,6 +8,9 @@ on:
 
 jobs:
   test-and-build:
+
+    # Do not run this workflow on PRs coming from forks to avoid exposing secrets.
+    if: ${{ !github.event.pull_request.head.repo.fork }}
 
     # Run on a self-hosted runner
     runs-on: [self-hosted, Linux, X64, GitHubActionsDemo-runner]
