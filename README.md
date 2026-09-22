@@ -180,10 +180,25 @@ The test suite validates:
 docker build -t githubactionsdemo .
 ```
 
-### Run container
+### Run container locally
 
 ```bash
 docker run -p 8080:8080 githubactionsdemo
+```
+
+Then open:
+
+```text
+http://localhost:8080/
+```
+
+### Pull the published Docker image from Docker Hub
+
+After the GitHub Actions workflow has published the image, you can run it directly from Docker Hub with:
+
+```bash
+docker pull ayushisar110/githubactionsdemo:latest
+docker run -p 8080:8080 ayushisar110/githubactionsdemo:latest
 ```
 
 Then open:
