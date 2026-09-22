@@ -21,4 +21,17 @@ app.MapGet("/api/order/total", (decimal price, int quantity, decimal discountPer
 
 });
 
+app.MapGet("/api/order/total-with-tax", (decimal price, int quantity, decimal discountPercent, decimal taxPercent) =>
+{
+    var orderService = app.Services.GetRequiredService<OrderService>();
+
+    var result = orderService.CalculateTotalWithTax(
+        price,
+        quantity,
+        discountPercent,
+        taxPercent);
+
+    return Results.Ok(result);
+});
+
 app.Run();

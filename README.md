@@ -296,6 +296,8 @@ This sets up the GitHub self-hosted runner and starts it in the configured work 
 
 ```bash
 curl "http://localhost:8080/api/order/total?price=250&quantity=3&discountPercent=5"
+
+curl "http://localhost:8080/api/order/total-with-tax?price=100&quantity=2&discountPercent=10&taxPercent=18"
 ```
 
 ## Notes
