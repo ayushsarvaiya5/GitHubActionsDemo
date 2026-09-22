@@ -7,7 +7,68 @@ on:
       - feature/*
 
 jobs:
+
+  # 1. CHECK BRANCH + CHECK CHANGED FILES
+  check-changes:
+
+    runs-on: [self-hosted, Linux, X64, GitHubActionsDemo-runner]
+
+    outputs:
+      src_changed: ${{ steps.filter.outputs.src }}
+      tests_changed: ${{ steps.filter.outputs.tests }}
+
+    steps:
+
+      - name: Show branch information
+        run: |
+          echo "=========================================="
+          echo " Branch Information"
+          echo "=========================================="
+          echo "Branch      : ${{ github.ref_name }}"
+          echo "Full ref    : ${{ github.ref }}"
+          echo "Commit      : ${{ github.sha }}"
+          echo "Repository  : ${{ github.repository }}"
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # Required for push events so paths-filter can compare git history
+
+      - name: Check changed files
+        id: filter
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          filters: .github/workflows/utils/file-filters.yml
+
+      - name: Show path filter result
+        run: |
+          echo "=========================================="
+          echo " Path Filter"
+          echo "=========================================="
+
+          echo "src changed: ${{ steps.filter.outputs.src }}"
+          echo "tests changed : ${{ steps.filter.outputs.tests }}"
+
+          if [ "${{ steps.filter.outputs.src }}" = "true" ]; then
+            echo "RESULT: ✅ src/ changed"
+          else
+            echo "RESULT: ❌ src/ not changed"
+          fi
+
+          if [ "${{ steps.filter.outputs.tests }}" = "true" ]; then
+            echo "RESULT: ✅ tests/ changed"
+          else
+            echo "RESULT: ❌ tests/ not changed"
+          fi
+
+  # 2. TEST + BUILD
   test-and-build:
+
+    needs: check-changes
+
+    if: |
+      needs.check-changes.outputs.src_changed == 'true' ||
+      needs.check-changes.outputs.tests_changed == 'true'
 
     # Run on a self-hosted runner
     runs-on: [self-hosted, Linux, X64, GitHubActionsDemo-runner]
@@ -16,11 +77,6 @@ jobs:
     # runs-on: ubuntu-24.04
 
     steps:
-      - name: Show branch information
-        run: |
-          echo "Branch: ${{ github.ref_name }}"
-          echo "Full ref: ${{ github.ref }}"
-          echo "Commit: ${{ github.sha }}"
 
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -66,9 +122,16 @@ jobs:
       - name: Build
         run: dotnet build src/GitHubActionsDemo.csproj --no-restore --configuration Release
 
+  # 3. BUILD + PUSH DOCKER IMAGE
   push-docker-image:
-    needs: test-and-build
-    if: github.ref == 'refs/heads/main'
+
+    needs:
+      - check-changes 
+      - test-and-build
+    
+    if: |
+      github.ref == 'refs/heads/main' &&
+      needs.check-changes.outputs.src_changed == 'true'
 
     # Run on a self-hosted runner
     runs-on: [self-hosted, Linux, X64, GitHubActionsDemo-runner]
