@@ -14,8 +14,8 @@ jobs:
     runs-on: [self-hosted, Linux, X64, GitHubActionsDemo-runner]
 
     outputs:
-      src_changed: ${{ steps.filter.outputs.src }}
-      tests_changed: ${{ steps.filter.outputs.tests }}
+      src_changed: ${{ steps.path-filter.outputs.src }}
+      tests_changed: ${{ steps.path-filter.outputs.tests }}
 
     steps:
 
@@ -35,31 +35,8 @@ jobs:
           fetch-depth: 0 # Required for push events so paths-filter can compare git history
 
       - name: Check changed files
-        id: filter
-        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
-        with:
-          filters: .github/workflows/utils/file-filters.yml
-
-      - name: Show path filter result
-        run: |
-          echo "=========================================="
-          echo " Path Filter"
-          echo "=========================================="
-
-          echo "src changed: ${{ steps.filter.outputs.src }}"
-          echo "tests changed : ${{ steps.filter.outputs.tests }}"
-
-          if [ "${{ steps.filter.outputs.src }}" = "true" ]; then
-            echo "RESULT: ✅ src/ changed"
-          else
-            echo "RESULT: ❌ src/ not changed"
-          fi
-
-          if [ "${{ steps.filter.outputs.tests }}" = "true" ]; then
-            echo "RESULT: ✅ tests/ changed"
-          else
-            echo "RESULT: ❌ tests/ not changed"
-          fi
+        id: path-filter
+        uses: ./.github/actions/path-filter
 
   # 2. TEST + BUILD
   test-and-build:
