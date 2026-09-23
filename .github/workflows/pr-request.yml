@@ -7,7 +7,7 @@ on:
       - main
 
 jobs:
-  test-and-build:
+  check-changes:
 
     # Do not run this workflow on PRs coming from forks to avoid exposing secrets.
     if: ${{ !github.event.pull_request.head.repo.fork }}
@@ -18,12 +18,40 @@ jobs:
     # If you want to run on a GitHub-hosted runner, uncomment the following line and comment out the above line.
     # runs-on: ubuntu-24.04
 
+    outputs:
+      src_changed: ${{ steps.path-filter.outputs.src }}
+      tests_changed: ${{ steps.path-filter.outputs.tests }}
+
     steps:
       - name: Show branch information
         run: |
           echo "Source: ${{ github.head_ref }}"
           echo "Target: ${{ github.base_ref }}"
 
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Check changed files
+        id: path-filter
+        uses: ./.github/actions/path-filter
+
+  test-and-build:
+
+    needs: check-changes
+
+    if: |
+      needs.check-changes.outputs.src_changed == 'true' ||
+      needs.check-changes.outputs.tests_changed == 'true'
+
+    # Run on a self-hosted runner
+    runs-on: [self-hosted, Linux, X64, GitHubActionsDemo-runner]
+
+    # If you want to run on a GitHub-hosted runner, uncomment the following line and comment out the above line.
+    # runs-on: ubuntu-24.04
+
+    steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 

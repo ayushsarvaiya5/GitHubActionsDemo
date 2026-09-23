@@ -1,0 +1,41 @@
+name: Path Filter
+description: Check whether source or test files changed and expose the results as outputs.
+
+outputs:
+  src:
+    description: Whether files under src/ changed.
+    value: ${{ steps.filter.outputs.src }}
+  tests:
+    description: Whether files under tests/ changed.
+    value: ${{ steps.filter.outputs.tests }}
+
+runs:
+  using: composite
+  steps:
+    - name: Check changed files
+      id: filter
+      uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+      with:
+        filters: .github/workflows/utils/file-filters.yml
+
+    - name: Show path filter result
+      shell: bash
+      run: |
+        echo "=========================================="
+        echo " Path Filter"
+        echo "=========================================="
+
+        echo "src changed: ${{ steps.filter.outputs.src }}"
+        echo "tests changed : ${{ steps.filter.outputs.tests }}"
+
+        if [ "${{ steps.filter.outputs.src }}" = "true" ]; then
+          echo "RESULT: ✅ src/ changed"
+        else
+          echo "RESULT: ❌ src/ not changed"
+        fi
+
+        if [ "${{ steps.filter.outputs.tests }}" = "true" ]; then
+          echo "RESULT: ✅ tests/ changed"
+        else
+          echo "RESULT: ❌ tests/ not changed"
+        fi
