@@ -13,7 +13,7 @@ jobs:
     if: ${{ !github.event.pull_request.head.repo.fork }}
 
     # Run on a self-hosted runner
-    runs-on: [self-hosted, Linux, X64, GitHubActionsDemo-runner]
+    runs-on: [GitHubActionsDemo-runner, self-hosted, Linux, X64]
 
     # If you want to run on a GitHub-hosted runner, uncomment the following line and comment out the above line.
     # runs-on: ubuntu-24.04

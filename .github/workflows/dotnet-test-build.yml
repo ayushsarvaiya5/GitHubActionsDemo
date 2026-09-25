@@ -1,11 +1,15 @@
 name: .NET Test and Build
 
 on:
+  # This workflow is triggered by other workflows using the `workflow_call` event.
   workflow_call:
+
+  # This workflow can also be triggered manually using the `workflow_dispatch` event.
+  workflow_dispatch:
 
 jobs:
   test-and-build:
-    runs-on: [self-hosted, Linux, X64, GitHubActionsDemo-runner]
+    runs-on: [GitHubActionsDemo-runner, self-hosted, Linux, X64]
 
     steps:
       - name: Checkout repository
@@ -36,9 +40,9 @@ jobs:
           echo "Exact cache hit: ${{ steps.nuget-cache.outputs.cache-hit }}"
 
           if [ "${{ steps.nuget-cache.outputs.cache-hit }}" = "true" ]; then
-            echo "RESULT: ✅ EXACT CACHE HIT"
+            echo "RESULT: EXACT CACHE HIT"
           else
-            echo "RESULT: ❌ EXACT CACHE MISS"
+            echo "RESULT: EXACT CACHE MISS"
           fi
 
       - name: Restore dependencies
