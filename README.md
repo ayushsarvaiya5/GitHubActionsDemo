@@ -289,6 +289,7 @@ In practice, the rule is simple:
 - `fix` = PATCH
 - `feat` = MINOR
 - `feat!` = MAJOR
+- `BREAKING CHANGE:` = MAJOR
 
 ## Versioning Baseline
 
