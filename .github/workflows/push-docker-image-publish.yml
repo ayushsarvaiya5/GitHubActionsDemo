@@ -6,9 +6,15 @@ on:
       - main
       - feature/*
 
+# Required for creating Git tags
+permissions:
+  contents: write
+
 jobs:
 
+  # ============================================================
   # 1. CHECK BRANCH + CHECK CHANGED FILES
+  # ============================================================
   check-changes:
 
     runs-on: [GitHubActionsDemo-runner, self-hosted, Linux, X64]
@@ -32,13 +38,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0 # Required for push events so paths-filter can compare git history
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Check changed files
         id: path-filter
         uses: ./.github/actions/path-filter
 
+
+  # ============================================================
   # 2. TEST + BUILD
+  # ============================================================
   test-and-build:
 
     needs: check-changes
@@ -49,43 +59,156 @@ jobs:
 
     uses: ./.github/workflows/dotnet-test-build.yml
 
-  # 3. BUILD + PUSH DOCKER IMAGE
-  push-docker-image:
+
+  # ============================================================
+  # 3. CALCULATE VERSION
+  #
+  # Only runs on main.
+  #
+  # Conventional Commits:
+  #
+  # fix: something       -> PATCH
+  # feat: something      -> MINOR
+  # feat!: something     -> MAJOR
+  # BREAKING CHANGE:     -> MAJOR
+  #
+  # Example:
+  #
+  # v1.2.3
+  #    |
+  #    +-- fix: bug
+  #          ↓
+  #        v1.2.4
+  #
+  # ============================================================
+  calculate-version:
 
     needs:
-      - check-changes 
+      - check-changes
       - test-and-build
-    
+
     if: |
       github.ref == 'refs/heads/main' &&
       needs.check-changes.outputs.src_changed == 'true'
 
-    # Run on a self-hosted runner
     runs-on: [GitHubActionsDemo-runner, self-hosted, Linux, X64]
 
-    # If you want to run on a GitHub-hosted runner, uncomment the following line and comment out the above line.
-    # runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.semver.outputs.nextStrict }}
+      tag: ${{ steps.semver.outputs.next }}
+      bump: ${{ steps.semver.outputs.bump }}
 
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Calculate next semantic version
+        id: semver
+        uses: ietf-tools/semver-action@1.11.0
+        with:
+          token: ${{ github.token }}
+          fallbackTag: v0.0.0
+
+      - name: Show calculated version
+        run: |
+          echo "=========================================="
+          echo " Semantic Version"
+          echo "=========================================="
+          echo "Previous : ${{ steps.semver.outputs.current }}"
+          echo "Next     : ${{ steps.semver.outputs.next }}"
+          echo "Version  : ${{ steps.semver.outputs.nextStrict }}"
+          echo "Bump     : ${{ steps.semver.outputs.bump }}"
+
+
+  # ============================================================
+  # 4. CREATE GIT TAG
+  # ============================================================
+  create-tag:
+
+    needs: calculate-version
+
+    runs-on: [GitHubActionsDemo-runner, self-hosted, Linux, X64]
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Create and push version tag
+        env:
+          VERSION: ${{ needs.calculate-version.outputs.version }}
+          TAG: ${{ needs.calculate-version.outputs.tag }}
+        run: |
+          echo "Creating tag: $TAG"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git tag -a "$TAG" "$GITHUB_SHA" -m "Release $TAG"
+
+          git push origin "$TAG"
+
+          echo "Tag $TAG created successfully."
+
+
+  # ============================================================
+  # 5. BUILD + PUSH DOCKER IMAGE
+  # ============================================================
+  push-docker-image:
+
+    needs:
+      - check-changes
+      - test-and-build
+      - calculate-version
+      - create-tag
+
+    if: |
+      github.ref == 'refs/heads/main' &&
+      needs.check-changes.outputs.src_changed == 'true'
+
+    runs-on: [GitHubActionsDemo-runner, self-hosted, Linux, X64]
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
- 
+
       - name: Log in to Docker Hub
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v6.4.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Show Docker image version
+        run: |
+          echo "=========================================="
+          echo " Docker Image"
+          echo "=========================================="
+          echo "Version : ${{ needs.calculate-version.outputs.version }}"
+          echo "Tag     : ${{ needs.calculate-version.outputs.tag }}"
+          echo "Bump    : ${{ needs.calculate-version.outputs.bump }}"
+
       - name: Build and push Docker image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           push: true
+
           tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/githubactionsdemo:${{ needs.calculate-version.outputs.version }}
             ${{ secrets.DOCKERHUB_USERNAME }}/githubactionsdemo:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/githubactionsdemo:${{ github.sha }}
+
           cache-from: type=gha
           cache-to: type=gha,mode=max
