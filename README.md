@@ -259,6 +259,53 @@ Store these secrets at the repository level (or organization level if you manage
 
 This is the core demonstration of the repository: GitHub Actions as the automation layer for a .NET app.
 
+## Commit Message Conventions For Auto Versioning
+
+This repository uses automatic tag generation for releases, so the commit message controls the version bump.
+
+Use only these commit formats when you want a release tag to move forward:
+
+- `fix: ...` -> PATCH
+- `feat: ...` -> MINOR
+- `feat!: ...` -> MAJOR
+
+Examples:
+
+```text
+fix: fix redis connection
+1.2.3 -> 1.2.4
+
+feat: add order API
+1.2.4 -> 1.3.0
+
+feat!: change authentication API
+1.3.0 -> 2.0.0
+```
+
+Other commit types such as `docs:`, `test:`, `refactor:`, `chore:`, `ci:`, `build:`, and `style:` do not trigger a Docker image version release in this setup.
+
+In practice, the rule is simple:
+
+- `fix` = PATCH
+- `feat` = MINOR
+- `feat!` = MAJOR
+
+## Versioning Baseline
+
+If you want to create and publish the first release tag for this repository, use the following commands:
+
+```bash
+git tag -a v0.0.0 -m "Versioning baseline"
+git push origin v0.0.0
+git tag
+```
+
+Example output:
+
+```text
+v0.0.0
+```
+
 ## Self-Hosted GitHub Runner Setup
 
 The project includes a self-hosted runner configuration under:

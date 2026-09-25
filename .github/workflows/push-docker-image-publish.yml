@@ -65,12 +65,14 @@ jobs:
   #
   # Only runs on main.
   #
-  # Conventional Commits:
+  # Commit message conventions used for automatic versioning:
   #
-  # fix: something       -> PATCH
-  # feat: something      -> MINOR
-  # feat!: something     -> MAJOR
-  # BREAKING CHANGE:     -> MAJOR
+  # fix: ...   -> PATCH
+  # feat: ...  -> MINOR
+  # feat!: ... -> MAJOR
+  #
+  # Other commit types such as docs:, test:, refactor:, chore:, ci:, build:, and style:
+  # do not trigger a Docker image version release in this setup.
   #
   # Example:
   #
