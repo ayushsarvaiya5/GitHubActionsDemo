@@ -114,6 +114,7 @@ jobs:
         with:
           token: ${{ github.token }}
           fallbackTag: v0.0.0
+          noVersionBumpBehavior: silent
 
       - name: Show calculated version
         run: |
@@ -132,6 +133,8 @@ jobs:
   create-tag:
 
     needs: calculate-version
+
+    if: needs.calculate-version.outputs.bump != 'none'
 
     runs-on: [GitHubActionsDemo-runner, self-hosted, Linux, X64]
 
@@ -173,7 +176,8 @@ jobs:
 
     if: |
       github.ref == 'refs/heads/main' &&
-      needs.check-changes.outputs.src_changed == 'true'
+      needs.check-changes.outputs.src_changed == 'true' &&
+      needs.calculate-version.outputs.bump != 'none'
 
     runs-on: [GitHubActionsDemo-runner, self-hosted, Linux, X64]
 

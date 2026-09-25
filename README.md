@@ -268,6 +268,7 @@ Use only these commit formats when you want a release tag to move forward:
 - `fix: ...` -> PATCH
 - `feat: ...` -> MINOR
 - `feat!: ...` -> MAJOR
+- `BREAKING CHANGE:` = MAJOR
 
 Examples:
 
