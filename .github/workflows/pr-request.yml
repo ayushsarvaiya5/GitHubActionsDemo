@@ -45,38 +45,4 @@ jobs:
       needs.check-changes.outputs.src_changed == 'true' ||
       needs.check-changes.outputs.tests_changed == 'true'
 
-    # Run on a self-hosted runner
-    runs-on: [self-hosted, Linux, X64, GitHubActionsDemo-runner]
-
-    # If you want to run on a GitHub-hosted runner, uncomment the following line and comment out the above line.
-    # runs-on: ubuntu-24.04
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      # Setup .NET : If you are not using a self-hosted runner with .NET pre-installed, uncomment the following lines to set up .NET SDK.
-
-      # - name: Setup .NET
-      #   uses: actions/setup-dotnet@v4
-      #   with:
-      #     dotnet-version: '10.0.x'
-          
-      - name: Cache NuGet packages
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 #v6.1.0
-        with:
-          path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/packages.lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
-
-      - name: Restore dependencies
-        run: |
-          dotnet restore src/GitHubActionsDemo.csproj
-          dotnet restore tests/GitHubActionsDemo.Tests.csproj
-
-      - name: Run tests
-        run: dotnet test tests/GitHubActionsDemo.Tests.csproj --no-restore --configuration Release
-
-      - name: Build
-        run: dotnet build src/GitHubActionsDemo.csproj --no-restore --configuration Release
+    uses: ./.github/workflows/dotnet-test-build.yml

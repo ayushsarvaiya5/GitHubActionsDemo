@@ -16,7 +16,7 @@ runs:
       id: filter
       uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
       with:
-        filters: .github/workflows/utils/file-filters.yml
+        filters: .github/actions/path-filter/utils/file-filters.yml
 
     - name: Show path filter result
       shell: bash
