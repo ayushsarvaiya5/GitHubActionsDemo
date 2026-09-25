@@ -19,7 +19,7 @@ public class OrderApiTests : IClassFixture<WebApplicationFactory<Program>>
     {
         var client = _factory.CreateClient();
 
-        var response = await client.GetAsync("/api/order/calculate-total?price=100&quantity=2&discountPercent=10");
+        var response = await client.GetAsync("/api/order/total?price=100&quantity=2&discountPercent=10");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
