@@ -8,7 +8,7 @@ var app = builder.Build();
 
 app.MapGet("/", () => "GitHub Actions Demo API");
 
-app.MapGet("/api/order/total", (decimal price, int quantity, decimal discountPercent) =>
+app.MapGet("/api/order/calculate-total", (decimal price, int quantity, decimal discountPercent) =>
 {
     var orderService = app.Services.GetRequiredService<OrderService>();
 
@@ -21,7 +21,7 @@ app.MapGet("/api/order/total", (decimal price, int quantity, decimal discountPer
 
 });
 
-app.MapGet("/api/order/total-with-tax", (decimal price, int quantity, decimal discountPercent, decimal taxPercent) =>
+app.MapGet("/api/order/calculate-total-with-tax", (decimal price, int quantity, decimal discountPercent, decimal taxPercent) =>
 {
     var orderService = app.Services.GetRequiredService<OrderService>();
 
