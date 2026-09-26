@@ -1,0 +1,25 @@
+name: Run and Use Example
+
+on:
+  workflow_dispatch:
+    inputs:
+      greeting:
+        description: "Message to print"
+        required: true
+        default: "Hello from GitHub Actions!"
+
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+
+    steps:
+    
+      # `run` executes a shell command on the runner.
+      - name: Print the greeting input
+        run: echo "${{ inputs.greeting }}"
+        
+      # `uses` can also receive settings through `with`.
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"

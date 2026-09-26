@@ -1,0 +1,36 @@
+name: Matrix Strategy Example
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-on-every-os:
+    # GitHub creates one job for each value in this matrix.
+    strategy:
+      matrix:
+        operating-system: [ubuntu-latest, windows-latest, macos-latest]
+
+    # The current matrix value chooses the runner for this job.
+    runs-on: ${{ matrix.operating-system }}
+
+    steps:
+      # Download the repository onto the selected runner.
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      # Install the .NET SDK.
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      
+      - name: Restore dependencies
+        run: |
+          dotnet restore src/GitHubActionsDemo.csproj
+          dotnet restore tests/GitHubActionsDemo.Tests.csproj
+
+      - name: Run tests
+        run: dotnet test tests/GitHubActionsDemo.Tests.csproj --no-restore --configuration Release
+
+      - name: Build the application
+        run: dotnet build src/GitHubActionsDemo.csproj --no-restore --configuration Release
