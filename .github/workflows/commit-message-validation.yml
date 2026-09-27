@@ -1,0 +1,87 @@
+name: Commit Message Validation
+
+# Validate commit messages on pull requests and branch pushes.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - main
+      - feature/**
+
+permissions:
+  contents: read
+
+jobs:
+  validate-commit-messages:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate commit messages
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+
+          # Allowed prefixes and their version meaning:
+          # fix=PATCH, feat=MINOR, feat!=MAJOR, BREAKING CHANGE=MAJOR.
+          # docs, test, refactor, chore, ci, build, and style do not release.
+          prefix_pattern='(fix|feat!|feat|BREAKING CHANGE|docs|test|refactor|chore|ci|build|style)'
+          header_pattern="^${prefix_pattern}: [A-Z]"
+
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            commit_range="$BASE_SHA..$HEAD_SHA"
+          elif [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            commit_range="$HEAD_SHA"
+          else
+            commit_range="$BEFORE_SHA..$HEAD_SHA"
+          fi
+
+          commit_count=0
+
+          while IFS= read -r commit_sha; do
+            [ -z "$commit_sha" ] && continue
+            commit_count=$((commit_count + 1))
+            subject="$(git log -1 --format=%s "$commit_sha")"
+
+            if [[ ! "$subject" =~ $header_pattern ]]; then
+              echo "Invalid commit message in $commit_sha:"
+              echo "  $subject"
+              echo "The message must start with an allowed prefix followed by ': ' and an uppercase letter."
+              exit 1
+            fi
+
+            prefix="${subject%%: *}"
+            message="${subject#*: }"
+
+            if [[ ! "$message" =~ ^[A-Z][[:print:]]*$ ]]; then
+              echo "Invalid characters in commit message in $commit_sha:"
+              echo "  $subject"
+              echo "Use letters, numbers, spaces, and printable symbols only."
+              exit 1
+            fi
+
+            if [ "${#message}" -gt 50 ]; then
+              echo "Commit message is too long in $commit_sha:"
+              echo "  $subject"
+              echo "The text after ': ' must be 50 characters or fewer."
+              exit 1
+            fi
+
+            echo "Valid [$prefix]: $subject"
+          done < <(git rev-list "$commit_range")
+
+          if [ "$commit_count" -eq 0 ]; then
+            echo "No new commits to validate."
+          else
+            echo "Validated $commit_count commit message(s)."
+          fi

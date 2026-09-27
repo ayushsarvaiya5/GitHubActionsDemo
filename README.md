@@ -207,6 +207,29 @@ Then open:
 http://localhost:8080/
 ```
 
+## Kubernetes
+
+The `k8s/` directory contains a two-replica deployment and an internal service for the published Docker image.
+
+Apply the resources with:
+
+```bash
+kubectl apply -k k8s/
+```
+
+Check the rollout and service:
+
+```bash
+kubectl rollout status deployment/githubactionsdemo
+kubectl get pods,service -l app.kubernetes.io/name=githubactionsdemo
+```
+
+To access the API locally through port forwarding:
+
+```bash
+kubectl port-forward service/githubactionsdemo 8080:8080
+```
+
 ## GitHub Actions Workflows
 
 This project is built to demonstrate the workflow automation itself. The repository includes two key pipelines:
