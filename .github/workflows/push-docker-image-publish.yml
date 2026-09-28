@@ -39,7 +39,6 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-          fetch-tags: true
 
       - name: Check changed files
         id: path-filter
@@ -72,15 +71,7 @@ jobs:
   # feat!: ... -> MAJOR
   #
   # Other commit types such as docs:, test:, refactor:, chore:, ci:, build:, and style:
-  # do not trigger a Docker image version release in this setup.
-  #
-  # Example:
-  #
-  # v1.2.3
-  #    |
-  #    +-- fix: bug
-  #          ↓
-  #        v1.2.4
+  # do not trigger a Docker image version release.
   #
   # ============================================================
   calculate-version:

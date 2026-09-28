@@ -10,7 +10,7 @@ outputs:
     value: ${{ steps.filter.outputs.tests }}
 
 runs:
-  using: composite
+  using: composite # Composite actions allow you to combine multiple steps into a single action.
   steps:
     - name: Check changed files
       id: filter

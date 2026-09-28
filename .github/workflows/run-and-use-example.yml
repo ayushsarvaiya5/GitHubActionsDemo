@@ -9,7 +9,7 @@ on:
         default: "Hello from GitHub Actions!"
 
 jobs:
-  demo:
+  run-example-job:
     runs-on: ubuntu-latest
 
     steps:
@@ -17,9 +17,17 @@ jobs:
       # `run` executes a shell command on the runner.
       - name: Print the greeting input
         run: echo "${{ inputs.greeting }}"
-        
-      # `uses` can also receive settings through `with`.
+    
+  use-example-job:
+    runs-on: ubuntu-latest
+
+    steps:
+      
+      # `uses` runs a reusable action provided by GitHub Actions Marketplace or from a local actions directory.
       - name: Set up .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: "10.0.x"
+
+      - name: Check .NET version
+        run: dotnet --version
