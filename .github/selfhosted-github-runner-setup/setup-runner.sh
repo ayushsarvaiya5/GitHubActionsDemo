@@ -55,7 +55,8 @@ if [ ! -f "$RUNNER_PACKAGE" ]; then
     echo "Version : $RUNNER_VERSION"
     echo "Arch    : $RUNNER_ARCH"
 
-    curl -fL \
+    curl -4 -fL \
+        --resolve release-assets.githubusercontent.com:443:185.199.108.133 \
         -o "$RUNNER_PACKAGE" \
         "$RUNNER_DOWNLOAD_URL"
 
