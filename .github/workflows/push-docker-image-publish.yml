@@ -212,7 +212,7 @@ jobs:
         env:
           VERSION: ${{ needs.release-please.outputs.version }}
         run: |
-          sed -i -E "s/^  newTag: .*/  newTag: ${VERSION}/" k8s/kustomization.yaml
+          sed -i -E "s/^([[:space:]]*)newTag: .*/\1newTag: ${VERSION}/" k8s/kustomization.yaml
 
           echo "Updated Kubernetes image tag to ${VERSION}"
           git diff -- k8s/kustomization.yaml
