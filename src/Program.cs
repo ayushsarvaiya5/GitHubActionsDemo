@@ -48,16 +48,9 @@ app.MapGet("/api/say-goodbye", () =>
     return Results.Ok(result);
 });
 
-app.MapGet("/api/v3.1/say-hello", () =>
+app.MapGet("/api/v3.1.0/say-hello-v3.1", () =>
 {
-    var result = "Hello, World! This is version 3.1 of the API.";
-
-    return Results.Ok(result);
-});
-
-app.MapGet("/api/v3.1/say-goodbye", () =>
-{
-    var result = "Goodbye, World! This is version 3.1 of the API.";
+    var result = "Hello, World! (v3.1)";
 
     return Results.Ok(result);
 });
