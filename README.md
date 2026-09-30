@@ -253,14 +253,16 @@ File: .github/workflows/push-docker-image-publish.yml
 This workflow shows how a successful build can be turned into a deployment artifact. It:
 
 - runs tests and build checks
-- publishes a Docker image to Docker Hub
-- tags the image with the latest version and commit SHA
-- only pushes on the main branch
+- runs [release-please](https://github.com/googleapis/release-please-action) on `main` to open/update a Release PR and, once that PR is merged, create the Git tag and GitHub release
+- publishes a Docker image to Docker Hub, tagged with the released version, only after a release is created
+- updates the Kubernetes manifest (`k8s/kustomization.yaml`) with the new image version
+- only runs the release/publish steps on the main branch
 
 Required GitHub secrets:
 
 - DOCKERHUB_USERNAME
 - DOCKERHUB_TOKEN
+- RELEASE_PLEASE_TOKEN
 
 ### How to generate and store these secrets
 
@@ -277,14 +279,59 @@ Required GitHub secrets:
 6. Add the following values:
    - Name: `DOCKERHUB_USERNAME`  Value: your Docker Hub username
    - Name: `DOCKERHUB_TOKEN`  Value: the generated Docker Hub access token
+   - Name: `RELEASE_PLEASE_TOKEN`  Value: a Personal Access Token (fine-grained, scoped to this repo) with **Contents: Read and write**, **Pull requests: Read and write**, and **Issues: Read and write** permissions
 
-Store these secrets at the repository level (or organization level if you manage shared secrets). They are used by the workflow in `.github/workflows/push-docker-image-publish.yml` to authenticate and push the Docker image.
+### How to create the `RELEASE_PLEASE_TOKEN` (fine-grained PAT)
+
+1. Go to GitHub -> click your profile photo -> **Settings**.
+2. In the left sidebar, go to **Developer settings**.
+3. Click **Personal access tokens** -> **Fine-grained tokens**.
+4. Click **Generate new token**.
+5. Fill in the token details:
+   - **Token name**: e.g. `release-please-githubactionsdemo`
+   - **Expiration**: choose a duration (max 1 year)
+   - **Resource owner**: your account (or the organization that owns the repo)
+   - **Repository access**: select **Only select repositories** and choose `GitHubActionsDemo`
+6. Under **Permissions -> Repository permissions**, set:
+   - **Contents**: Read and write
+   - **Pull requests**: Read and write
+   - **Issues**: Read and write
+7. Click **Generate token** and copy the value shown (it will not be shown again).
+8. In the repo, go to **Settings -> Secrets and variables -> Actions -> Secrets**.
+9. Click **New repository secret**.
+10. Set Name to `RELEASE_PLEASE_TOKEN` and Value to the token you copied, then click **Add secret**.
+11. When the token nears its expiration date, repeat these steps to generate a new token and update the secret value.
+
+Store these secrets at the repository level (or organization level if you manage shared secrets). They are used by the workflow in `.github/workflows/push-docker-image-publish.yml` to authenticate and push the Docker image, and to let release-please open release pull requests.
+
+> Note: `RELEASE_PLEASE_TOKEN` must be a Personal Access Token, not the default `GITHUB_TOKEN`. GitHub blocks the default token from creating pull requests unless "Allow GitHub Actions to create and approve pull requests" is enabled in Settings -> Actions -> General, and even then, PRs/tags created by `GITHUB_TOKEN` do not trigger other workflows.
 
 This is the core demonstration of the repository: GitHub Actions as the automation layer for a .NET app.
 
 ## Commit Message Conventions For Auto Versioning
 
-This repository uses automatic tag generation for releases, so the commit message controls the version bump.
+This repository uses [release-please](https://github.com/googleapis/release-please-action) to calculate the next version, so **the commit message on `main` controls the version bump**.
+
+### Branching approach used in this repository
+
+This repository follows this branching flow:
+
+```text
+main
+ └── feature branch created from main
+      └── story branch created from feature branch
+           story branch merged back into feature branch (PR)
+      feature branch merged back into main (PR)
+```
+
+In short:
+
+1. Create a **feature branch** from `main` (e.g. `feature/checkout-flow`).
+2. Create **story branches** from the feature branch for individual pieces of work (e.g. `story/add-cart-total`, `story/apply-discount`).
+3. Merge each **story branch into the feature branch** via PR. Commit messages here can be anything (e.g. `dev: story 1`) — they do not reach `main` and do not affect versioning.
+4. Once the feature branch is complete, merge the **feature branch into `main`** via PR.
+
+**This final PR into `main` is the one that matters.** When merging it, you must write a proper Conventional Commit message (`fix:`, `feat:`, or `feat!:`) as the commit/squash message — see the rules below — because release-please only reads commits that land on `main`, and this is the commit it will read.
 
 Use only these commit formats when you want a release tag to move forward:
 
@@ -314,6 +361,27 @@ In practice, the rule is simple:
 - `feat` = MINOR
 - `feat!` = MAJOR
 - `BREAKING CHANGE:` = MAJOR
+
+### Where this matters: merging into `main`
+
+release-please only reads commit messages that land on `main`. That means:
+
+- **Story / feature branch commits, and story -> feature branch merges:** you can write anything you want (e.g. `dev: story 1`, `wip`, `fix bug`). These never reach `main` directly and do **not** affect versioning.
+- **The PR / merge commit into `main`:** this is the one commit message that matters. Before merging a feature branch into `main`, make sure the commit message (the squash commit message, or the first line of the merge commit message) starts with `fix:`, `feat:`, or `feat!:` as appropriate, for example:
+
+  ```text
+  feat: implement checkout flow
+  ```
+
+  or, for a breaking change:
+
+  ```text
+  feat!: change checkout API response schema
+  ```
+
+  If the merge commit into `main` does not follow this format (e.g. `Merge pull request #17 from ...` with no `feat:`/`fix:` prefix), release-please ignores it for versioning purposes — no release PR update happens for that change.
+
+See `.github/workflows/push-docker-image-publish.yml` for the automation that consumes these commit messages.
 
 ## Versioning Baseline
 

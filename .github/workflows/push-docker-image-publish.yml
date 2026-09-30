@@ -72,6 +72,27 @@ jobs:
   # Commits, maintain the CHANGELOG.md, and create the Git tag / GitHub
   # release when a release PR is merged.
   #
+  # Commit message conventions used for automatic versioning.
+  # Only the commit message that lands on `main` (the squash commit, or
+  # the first line of a merge commit) is read by release-please. Commits
+  # on story/feature branches, or story -> feature branch merges, can say
+  # anything and will not affect versioning.
+  #
+  # Branching flow used in this repository:
+  #   main -> feature branch -> story branch -> story merged into feature (PR)
+  #        -> feature merged into main (PR)
+  #
+  # A proper Conventional Commit message (fix:/feat:/feat!:) is ONLY
+  # required on the final "feature branch -> main" PR merge. Story ->
+  # feature branch merges do not need to follow this format.
+  #
+  # fix: ...   -> PATCH
+  # feat: ...  -> MINOR
+  # feat!: ... -> MAJOR
+  #
+  # Other commit types such as docs:, test:, refactor:, chore:, ci:, build:, and style:
+  # do not trigger a Docker image version release in this setup.
+  #
   # https://github.com/googleapis/release-please-action
   # ============================================================
   release-please:
@@ -97,7 +118,7 @@ jobs:
         id: release
         uses: googleapis/release-please-action@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           release-type: simple
 
       - name: Show release outcome
