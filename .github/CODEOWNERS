@@ -1,5 +1,0 @@
-# release-please owns its own state files. Manual edits to these can desync
-# the tracked release version and break automated releases/tagging.
-# Require review from a maintainer before changes are merged.
-/.release-please-manifest.json @ayushsarvaiya5
-/release-please-config.json @ayushsarvaiya5
