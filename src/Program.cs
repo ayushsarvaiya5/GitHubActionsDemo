@@ -55,4 +55,11 @@ app.MapGet("/api/v3.1.0/say-hello-v3.1", () =>
     return Results.Ok(result);
 });
 
+app.MapGet("/api/v3.1.0/say-goodbye-v3.1", () =>
+{
+    var result = "Goodbye, World! (v3.1)";
+
+    return Results.Ok(result);
+});
+
 app.Run();
