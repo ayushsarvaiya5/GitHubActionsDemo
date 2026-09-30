@@ -118,6 +118,12 @@ jobs:
 
     steps:
 
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
       - name: Run release-please
         id: release
         uses: googleapis/release-please-action@v4
