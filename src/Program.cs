@@ -41,4 +41,11 @@ app.MapGet("/api/say-hello", () =>
     return Results.Ok(result);
 });
 
+app.MapGet("/api/say-goodbye", () =>
+{
+    var result = "Goodbye, World!";
+
+    return Results.Ok(result);
+});
+
 app.Run();
