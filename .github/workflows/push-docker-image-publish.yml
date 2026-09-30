@@ -69,8 +69,9 @@ jobs:
   # Only runs on main.
   #
   # Uses release-please to determine the next version from Conventional
-  # Commits, maintain the CHANGELOG.md, and create the Git tag / GitHub
-  # release when a release PR is merged.
+  # Commits, maintain the CHANGELOG.md, and directly create the Git tag /
+  # GitHub release on every qualifying push to main (no Release PR step,
+  # because skip-github-pull-request is enabled below).
   #
   # Commit message conventions used for automatic versioning.
   # Only the commit message that lands on `main` (the squash commit, or
@@ -120,6 +121,7 @@ jobs:
         with:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           release-type: simple
+          skip-github-pull-request: true
 
       - name: Show release outcome
         run: |
