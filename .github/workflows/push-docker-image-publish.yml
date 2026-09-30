@@ -6,9 +6,12 @@ on:
       - main
       - feature/*
 
-# Required for creating Git tags
+# Required by release-please (releases, tags, release PRs) and for pushing
+# the Kubernetes manifest update commit.
 permissions:
   contents: write
+  issues: write
+  pull-requests: write
 
 jobs:
 
@@ -39,6 +42,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          fetch-tags: true
 
       - name: Check changed files
         id: path-filter
@@ -60,21 +64,17 @@ jobs:
 
 
   # ============================================================
-  # 3. CALCULATE VERSION
+  # 3. RELEASE PLEASE (VERSIONING + GIT TAG + GITHUB RELEASE)
   #
   # Only runs on main.
   #
-  # Commit message conventions used for automatic versioning:
+  # Uses release-please to determine the next version from Conventional
+  # Commits, maintain the CHANGELOG.md, and create the Git tag / GitHub
+  # release when a release PR is merged.
   #
-  # fix: ...   -> PATCH
-  # feat: ...  -> MINOR
-  # feat!: ... -> MAJOR
-  #
-  # Other commit types such as docs:, test:, refactor:, chore:, ci:, build:, and style:
-  # do not trigger a Docker image version release.
-  #
+  # https://github.com/googleapis/release-please-action
   # ============================================================
-  calculate-version:
+  release-please:
 
     needs:
       - check-changes
@@ -87,88 +87,43 @@ jobs:
     runs-on: [GitHubActionsDemo-runner, self-hosted, Linux, X64]
 
     outputs:
-      version: ${{ steps.semver.outputs.nextStrict }}
-      tag: ${{ steps.semver.outputs.next }}
-      bump: ${{ steps.semver.outputs.bump }}
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.release.outputs.version }}
 
     steps:
 
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Run release-please
+        id: release
+        uses: googleapis/release-please-action@v4
         with:
-          fetch-depth: 0
-          fetch-tags: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          release-type: simple
 
-      - name: Calculate next semantic version
-        id: semver
-        uses: ietf-tools/semver-action@c90370b2958652d71c06a3484129a4d423a6d8a8 # v1.11.0
-        with:
-          token: ${{ github.token }}
-          fallbackTag: v0.0.0
-          noVersionBumpBehavior: silent
-
-      - name: Show calculated version
+      - name: Show release outcome
         run: |
           echo "=========================================="
-          echo " Semantic Version"
+          echo " Release Please"
           echo "=========================================="
-          echo "Previous : ${{ steps.semver.outputs.current }}"
-          echo "Next     : ${{ steps.semver.outputs.next }}"
-          echo "Version  : ${{ steps.semver.outputs.nextStrict }}"
-          echo "Bump     : ${{ steps.semver.outputs.bump }}"
+          echo "Release created : ${{ steps.release.outputs.release_created }}"
+          echo "Tag              : ${{ steps.release.outputs.tag_name }}"
+          echo "Version          : ${{ steps.release.outputs.version }}"
 
 
   # ============================================================
-  # 4. CREATE GIT TAG
-  # ============================================================
-  create-tag:
-
-    needs: calculate-version
-
-    if: needs.calculate-version.outputs.bump != 'none'
-
-    runs-on: [GitHubActionsDemo-runner, self-hosted, Linux, X64]
-
-    steps:
-
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-
-      - name: Create and push version tag
-        env:
-          VERSION: ${{ needs.calculate-version.outputs.version }}
-          TAG: ${{ needs.calculate-version.outputs.tag }}
-        run: |
-          echo "Creating tag: $TAG"
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git tag -a "$TAG" "$GITHUB_SHA" -m "Release $TAG"
-
-          git push origin "$TAG"
-
-          echo "Tag $TAG created successfully."
-
-
-  # ============================================================
-  # 5. BUILD + PUSH DOCKER IMAGE
+  # 4. BUILD + PUSH DOCKER IMAGE
   # ============================================================
   push-docker-image:
 
     needs:
       - check-changes
       - test-and-build
-      - calculate-version
-      - create-tag
+      - release-please
 
     if: |
       github.ref == 'refs/heads/main' &&
       needs.check-changes.outputs.src_changed == 'true' &&
-      needs.calculate-version.outputs.bump != 'none'
+      needs.release-please.outputs.release_created == 'true'
 
     runs-on: [GitHubActionsDemo-runner, self-hosted, Linux, X64]
 
@@ -193,9 +148,8 @@ jobs:
           echo "=========================================="
           echo " Docker Image"
           echo "=========================================="
-          echo "Version : ${{ needs.calculate-version.outputs.version }}"
-          echo "Tag     : ${{ needs.calculate-version.outputs.tag }}"
-          echo "Bump    : ${{ needs.calculate-version.outputs.bump }}"
+          echo "Version : ${{ needs.release-please.outputs.version }}"
+          echo "Tag     : ${{ needs.release-please.outputs.tag_name }}"
 
       - name: Build and push Docker image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -204,8 +158,53 @@ jobs:
           push: true
 
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/githubactionsdemo:${{ needs.calculate-version.outputs.version }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/githubactionsdemo:${{ needs.release-please.outputs.version }}
             ${{ secrets.DOCKERHUB_USERNAME }}/githubactionsdemo:latest
 
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+
+  # ============================================================
+  # 5. UPDATE KUBERNETES IMAGE VERSION
+  # ============================================================
+  update-kubernetes-version:
+
+    needs:
+      - release-please
+      - push-docker-image
+
+    if: success()
+
+    runs-on: [GitHubActionsDemo-runner, self-hosted, Linux, X64]
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Update Kubernetes image tag
+        env:
+          VERSION: ${{ needs.release-please.outputs.version }}
+        run: |
+          sed -i -E "s/^  newTag: .*/  newTag: ${VERSION}/" k8s/kustomization.yaml
+
+          echo "Updated Kubernetes image tag to ${VERSION}"
+          git diff -- k8s/kustomization.yaml
+
+      - name: Commit and push Kubernetes version
+        env:
+          VERSION: ${{ needs.release-please.outputs.version }}
+        run: |
+          if git diff --quiet -- k8s/kustomization.yaml; then
+            echo "Kubernetes image tag is already ${VERSION}; nothing to commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add k8s/kustomization.yaml
+          git commit -m "chore: update Kubernetes image to ${VERSION} [skip ci]"
+          git push origin HEAD:${GITHUB_REF_NAME}

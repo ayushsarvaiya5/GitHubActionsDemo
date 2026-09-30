@@ -34,4 +34,11 @@ app.MapGet("/api/order/calculate-total-with-tax", (decimal price, int quantity, 
     return Results.Ok(result);
 });
 
+app.MapGet("/api/hello", () =>
+{
+    var result = "Hello, World!";
+
+    return Results.Ok(result);
+});
+
 app.Run();
