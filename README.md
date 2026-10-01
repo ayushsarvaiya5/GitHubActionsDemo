@@ -451,7 +451,3 @@ This repository is intentionally designed as a GitHub Actions showcase. The app 
 - self-hosted runner setup for custom GitHub-hosted workflows
 
 It is a practical example for learning DevOps automation in a small but realistic setup.
-
-## License
-
-This project does not currently include a license file. If you plan to share it publicly, consider adding an appropriate open-source license such as MIT.
