@@ -119,7 +119,7 @@ jobs:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
-          skip-github-pull-request: true
+          # skip-github-pull-request: true
 
       - name: Show release outcome
         run: |
