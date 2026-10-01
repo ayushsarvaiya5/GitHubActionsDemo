@@ -1,21 +1,33 @@
 name: Path Filter
-description: Check whether source or test files changed and expose the results as outputs.
+description: Compare two branches and check whether source or test files changed.
+
+inputs:
+  base:
+    description: Base branch to compare from.
+    required: true
+
+  ref:
+    description: Branch to compare to.
+    required: true
 
 outputs:
   src:
     description: Whether files under src/ changed.
     value: ${{ steps.filter.outputs.src }}
+
   tests:
     description: Whether files under tests/ changed.
     value: ${{ steps.filter.outputs.tests }}
 
 runs:
-  using: composite # Composite actions allow you to combine multiple steps into a single action.
+  using: composite
   steps:
     - name: Check changed files
       id: filter
       uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
       with:
+        base: ${{ inputs.base }}
+        ref: ${{ inputs.ref }}
         filters: .github/actions/path-filter/utils/file-filters.yml
 
     - name: Show path filter result
@@ -25,7 +37,11 @@ runs:
         echo " Path Filter"
         echo "=========================================="
 
-        echo "src changed: ${{ steps.filter.outputs.src }}"
+        echo "Base branch : ${{ inputs.base }}"
+        echo "Compare to  : ${{ inputs.ref }}"
+        echo ""
+
+        echo "src changed   : ${{ steps.filter.outputs.src }}"
         echo "tests changed : ${{ steps.filter.outputs.tests }}"
 
         if [ "${{ steps.filter.outputs.src }}" = "true" ]; then
@@ -39,3 +55,59 @@ runs:
         else
           echo "RESULT: ❌ tests/ not changed"
         fi
+
+
+
+
+
+
+
+
+# The following is an alternative implementation of the Path Filter action.
+# It checks whether source(/src folder) or test(/tests folder) files changed and exposes the results as outputs.
+# And using the outputs, you can conditionally run jobs in your workflow based on whether source or test files changed.
+
+
+
+
+# name: Path Filter
+# description: Check whether source or test files changed and expose the results as outputs.
+
+# outputs:
+#   src:
+#     description: Whether files under src/ changed.
+#     value: ${{ steps.filter.outputs.src }}
+#   tests:
+#     description: Whether files under tests/ changed.
+#     value: ${{ steps.filter.outputs.tests }}
+
+# runs:
+#   using: composite # Composite actions allow you to combine multiple steps into a single action.
+#   steps:
+#     - name: Check changed files
+#       id: filter
+#       uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+#       with:
+#         filters: .github/actions/path-filter/utils/file-filters.yml
+
+#     - name: Show path filter result
+#       shell: bash
+#       run: |
+#         echo "=========================================="
+#         echo " Path Filter"
+#         echo "=========================================="
+
+#         echo "src changed: ${{ steps.filter.outputs.src }}"
+#         echo "tests changed : ${{ steps.filter.outputs.tests }}"
+
+#         if [ "${{ steps.filter.outputs.src }}" = "true" ]; then
+#           echo "RESULT: ✅ src/ changed"
+#         else
+#           echo "RESULT: ❌ src/ not changed"
+#         fi
+
+#         if [ "${{ steps.filter.outputs.tests }}" = "true" ]; then
+#           echo "RESULT: ✅ tests/ changed"
+#         else
+#           echo "RESULT: ❌ tests/ not changed"
+#         fi

@@ -1,0 +1,42 @@
+name: Path Filter Demo
+
+on:
+  workflow_dispatch:
+    inputs:
+      base:
+        description: "Base branch"
+        required: true
+        default: "main"
+
+      ref:
+        description: "Branch to compare"
+        required: true
+        default: "feature/"
+
+jobs:
+  path-filter-demo:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Check changed files
+        id: path-filter
+        uses: ./.github/actions/path-filter
+        with:
+          base: ${{ inputs.base }}
+          ref: ${{ inputs.ref }}
+
+      - name: Show demo result
+        run: |
+          echo "=========================================="
+          echo " Path Filter Demo"
+          echo "=========================================="
+          echo "Comparing:"
+          echo "${{ inputs.base }} → ${{ inputs.ref }}"
+          echo ""
+          echo "src changed   : ${{ steps.path-filter.outputs.src }}"
+          echo "tests changed : ${{ steps.path-filter.outputs.tests }}"
