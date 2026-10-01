@@ -16,22 +16,22 @@ permissions:
 jobs:
   release-please:
     runs-on: [self-hosted, Linux, X64, GitHubActionsDemo-runner]
-  
+
     permissions:
       contents: write
       issues: write
       pull-requests: write
-    
+
     steps:
       - name: Release Please
         id: release
-        uses: googleapis/release-please-action@v4
+        uses: googleapis/release-please-action@v5
         with:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
           skip-github-pull-request: true
-        
+
       - name: Debug Release Outputs
         run: |
           echo "release_created = '${{ steps.release.outputs.release_created }}'"
