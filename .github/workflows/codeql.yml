@@ -1,17 +1,16 @@
 name: CodeQL Analysis
 
 on:
-  push:
-    branches:
-      - main
-      - feature/*
-
-  pull_request:
-    branches:
-      - main
+    push:
+        branches:
+            - main
+    pull_request:
+        branches:
+            - main
+    workflow_dispatch:
 
 #   schedule:
-#     - cron: '30 1 * * 0' # Runs every Sunday at 01:30 UTC
+#     - cron: '30 1 * * 0' # Runs weekly every Sunday at 01:30 UTC
 
 permissions:
     security-events: write
