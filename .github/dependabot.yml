@@ -1,0 +1,33 @@
+version: 2
+
+updates:
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  # NuGet packages in the application
+  - package-ecosystem: "nuget"
+    directory: "/src"
+    schedule:
+      interval: "weekly"
+
+  # NuGet packages in the test project
+  - package-ecosystem: "nuget"
+    directory: "/tests"
+    schedule:
+      interval: "weekly"
+
+    # Dependabot checks daily at 9 AM IST
+    # schedule:
+      # interval: "daily"
+      # time: "09:00"
+      # timezone: "Asia/Kolkata"
+
+    # Dependabot checks weekly on Mondays at 9 AM IST
+    # schedule:
+      # interval: "weekly"
+      # day: "monday"
+      # time: "09:00"
+      # timezone: "Asia/Kolkata"

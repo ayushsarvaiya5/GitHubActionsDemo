@@ -1,3 +1,26 @@
+# ----------------- Summary --------------------
+#
+# This workflow performs CodeQL security analysis on the repository.
+#
+# It is triggered by:
+# - Pushes to the `main` branch
+# - Pull requests targeting the `main` branch
+# - Manual execution using the `workflow_dispatch` event
+#
+# The workflow runs on a self-hosted runner with the `GitHubActionsDemo-runner` label.
+#
+# The workflow performs the following steps:
+# 1. Checks out the repository code.
+# 2. Initializes CodeQL for static security analysis.
+# 3. Restores the project's dependencies.
+# 4. Builds the .NET project.
+# 5. Runs the CodeQL analysis and uploads the results.
+#
+# CodeQL results can be viewed in:
+# Repository → Security and Quality → Code scanning
+#
+# ------------------------------------------------
+
 name: CodeQL Analysis
 
 on:
