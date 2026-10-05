@@ -43,15 +43,6 @@ app.MapGet("/api/say-hello", () =>
 });
 
 // Failing case for CodeQL analysis
-app.MapGet("/api/search", (string name) =>
-{
-    var sql_query = $"SELECT * FROM Users WHERE Name = '{name}'";
-
-    // This is a vulnerable code that can lead to SQL injection
-    // In a real application, you should use parameterized queries to prevent SQL injection attacks
-
-    return Results.Ok($"Executing query: {sql_query}");
-});
 
 // CodeQL demonstration: intentionally vulnerable code
 app.MapGet("/api/file", (string fileName) =>

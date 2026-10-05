@@ -42,11 +42,15 @@ jobs:
 
       # 3. RESTORE
       - name: Restore dependencies
-        run: dotnet restore src/GitHubActionsDemo.csproj
+        run: |
+          dotnet restore src/GitHubActionsDemo.csproj
+          dotnet restore tests/GitHubActionsDemo.Tests.csproj
 
       # 4. BUILD
       - name: Build
-        run: dotnet build src/GitHubActionsDemo.csproj --no-restore --configuration Release
+        run: |
+          dotnet build src/GitHubActionsDemo.csproj --no-restore --configuration Release
+          dotnet build tests/GitHubActionsDemo.Tests.csproj --no-restore --configuration Release
 
       # 5. CODEQL ANALYSIS
       - name: Analyze
