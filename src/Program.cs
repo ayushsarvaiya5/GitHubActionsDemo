@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using GitHubActionsDemo.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -39,6 +40,47 @@ app.MapGet("/api/say-hello", () =>
     var result = "Hello, World!";
 
     return Results.Ok(result);
+});
+
+// Failing case for CodeQL analysis
+app.MapGet("/api/search", (string name) =>
+{
+    var sql_query = $"SELECT * FROM Users WHERE Name = '{name}'";
+
+    // This is a vulnerable code that can lead to SQL injection
+    // In a real application, you should use parameterized queries to prevent SQL injection attacks
+
+    return Results.Ok($"Executing query: {sql_query}");
+});
+
+// CodeQL demonstration: intentionally vulnerable code
+app.MapGet("/api/file", (string fileName) =>
+{
+    // BAD: User-controlled input is directly used as a file path.
+    var content = File.ReadAllText(fileName);
+
+    return Results.Ok(content);
+});
+
+// Command Injection
+app.MapGet("/api/ping", (string host) =>
+{
+    var process = new Process
+    {
+        StartInfo = new ProcessStartInfo
+        {
+            FileName = "ping",
+            Arguments = host,
+            RedirectStandardOutput = true,
+            UseShellExecute = false
+        }
+    };
+
+    process.Start();
+
+    var output = process.StandardOutput.ReadToEnd();
+
+    return Results.Ok(output);
 });
 
 app.Run();
