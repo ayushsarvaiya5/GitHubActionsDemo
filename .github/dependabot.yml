@@ -1,39 +1,89 @@
-# If wants to mannually run updates 
-# then go to "Insights" tab of the repository, 
-# then click on "Dependency graph" in the left sidebar, 
-# then click on "Dependabot" tab, 
-# then click on "Recent update jobs" and click on "Check for updates" button.
+# Dependabot Configuration
+#
+# Dependabot automatically checks the configured package ecosystems for dependency updates. 
+# When an outdated dependency has a newer version available, Dependabot can create a pull request to update it.
+#
+# This helps keep project dependencies up to date with the latest bug fixes, security patches, and improvements.
+#
+# Supported package ecosystems in this configuration:
+# - GitHub Actions
+# - NuGet packages for the application
+# - NuGet packages for the test project
+#
+# ---------------------------------------------------------------------------
+# Commit Hash & Comment Sync Behavior
+# ---------------------------------------------------------------------------
+#
+# When managing GitHub Actions pinned to a strict commit SHA for immutability and security tracking 
+# (e.g., uses: actions/checkout@fbc6f39... # v5.1.0):
+#
+# 1. IDENTIFICATION: 
+#    Dependabot parses the inline comment right next to the hash to determine your current tracking version.
+#
+# 2. HASH UPDATE: 
+#    When a newer version releases, Dependabot automatically overwrites the old commit SHA with the latest secure commit hash in its generated PR.
+#
+# 3. COMMENT SYNCHRONIZATION: 
+#    Additionally, Dependabot rewrites the associated  text comment (e.g., automatically bumping '# v5.1.0' to '# v7.0.1') so,
+#    human-readable documentation never drifts out of sync with the actual hash code.
+#
+# ---------------------------------------------------------------------------
+# Manual Update Check
+# ---------------------------------------------------------------------------
+#
+# To manually check for dependency updates:
+#
+# 1. Open the repository on GitHub.
+# 2. Go to the "Insights" tab.
+# 3. Select "Dependency graph" from the left sidebar.
+# 4. Open the "Dependabot" tab.
+# 5. Under "Recent update jobs", click "Check for updates".
+#
+# This manually triggers Dependabot to check for available updates.
+
 
 version: 2
 
 updates:
+
   # GitHub Actions
+  # Monitors GitHub Actions used in the repository's workflow files.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
 
-  # NuGet packages in the application
+  # NuGet Packages - Application
+  # Monitors NuGet dependencies used by the application.
   - package-ecosystem: "nuget"
     directory: "/src"
     schedule:
       interval: "weekly"
 
-  # NuGet packages in the test project
+  # NuGet Packages - Tests
+  # Monitors NuGet dependencies used by the test project.
   - package-ecosystem: "nuget"
     directory: "/tests"
     schedule:
       interval: "weekly"
 
-    # Dependabot checks daily at 9 AM IST
-    # schedule:
-      # interval: "daily"
-      # time: "09:00"
-      # timezone: "Asia/Kolkata"
 
-    # Dependabot checks weekly on Mondays at 9 AM IST
-    # schedule:
-      # interval: "weekly"
-      # day: "monday"
-      # time: "09:00"
-      # timezone: "Asia/Kolkata"
+# ---------------------------------------------------------------------------
+# Schedule Examples
+# ---------------------------------------------------------------------------
+#
+# Dependabot checks daily at 9:00 AM IST:
+#
+# schedule:
+#   interval: "daily"
+#   time: "09:00"
+#   timezone: "Asia/Kolkata"
+#
+#
+# Dependabot checks every Monday at 9:00 AM IST:
+#
+# schedule:
+#   interval: "weekly"
+#   day: "monday"
+#   time: "09:00"
+#   timezone: "Asia/Kolkata"

@@ -1,0 +1,90 @@
+# Dependency Review Configuration
+#
+# The Dependency Review Action scans your Pull Requests for dependency changes before they are merged into your protected branch.
+#
+# It intercepts additions, removals, or version updates of packages, matches them 
+# against GitHub’s Advisory Database, and blocks vulnerable code or licensing issues.
+#
+# Key Features in this Configuration:
+# - Runs automatically on any open Pull Request targeting the 'main' branch.
+# - Leverages strict immutable commit hashes (SHAs) for elite security tracking.
+# - Fails the build for any introduced security vulnerabilities rated 'moderate' or higher.
+# - Injects a rich, scannable Markdown summary table directly into the PR timeline.
+#
+# ---------------------------------------------------------------------------
+# Scenario 1: Developer Manual PR Loop (New Package Added)
+# ---------------------------------------------------------------------------
+#
+# 1. TRIGGER: 
+#    A developer creates a story branch, introduces a new package 
+#    (e.g., via NuGet or a new GitHub Action runner step), and opens a PR 
+#    targeting a protected 'feature/*' or 'main' branch.
+#
+# 2. ANALYSIS: 
+#    This workflow instantly wakes up. 
+#    It isolates and scans ONLY the specific files and packages modified or introduced by this new commit. 
+#    Untouched packages in the repository are completely ignored.
+#
+# 3. VERDICT MODES:
+#    - SUCCESS (Safe): The new package has no moderate+ security vulnerabilities. 
+#      The pipeline passes (✅) and unblocks the PR for review/merge.
+#    - FAILURE (Unsafe): A vulnerability is found. 
+#      The build fails (❌) and your Ruleset locks the merge button. 
+#      The developer must push a version fix to  the branch, which resets and re-runs the action automatically from scratch.
+#
+# ---------------------------------------------------------------------------
+# Scenario 2: Dependabot Automated PR Loop (Existing Package Update)
+# ---------------------------------------------------------------------------
+#
+# 1. TRIGGER: 
+#    Dependabot scans your codebase weekly. It finds an outdated 
+#    version or commit hash (e.g., actions/checkout from v4.0.0 to v7.0.1) and 
+#    automatically creates a Pull Request targeting your branch.
+#
+# 2. INTERCEPTION & SCAN: 
+#    This workflow triggers on the automated PR, checks out 
+#    the files, and passes the updated version/SHA to the Dependency Review Action.
+#
+# 3. RESPONSE MODES:
+#    - SUCCESS (Safe): No moderate+ vulnerabilities found. A green checkmark (✅) 
+#      unblocks the PR, the markdown table summary comment is posted, and you merge.
+#    - FAILURE (Unsafe): A vulnerability is found in the new version. The build fails (❌) and blocks the merge. 
+#      You manually close the PR to reject it so Dependabot knows not to offer that specific unsafe version again.
+
+name: Dependency Review
+
+on:
+  pull_request:
+    branches:
+      - main        # Triggered exclusively when a PR opens, updates, or synchronizes against 'main'.
+      - feature/*   # Also triggers for any feature branches, allowing early detection of dependency issues.
+
+permissions:
+  contents: read       # Grants permission to safely read files (like package.json, csproj) to build the diff.
+  pull-requests: write # Required to allow the runner to automatically post the Markdown summary table comment inside your PR.
+
+jobs:
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest # Launches a clean, isolated Linux runner instance.
+
+    steps:
+      # Step 1: Checkout the Codebase
+      # Pulls down your repository files so the environment can parse package configuration adjustments.
+      - name: Checkout repository
+        uses: actions/checkout@1e31de5234b9f8995739874a8ce0492dc87873e2 # v4.0.0
+
+      # Step 2: Perform the Dependency Review Scan
+      # Inspects the pull request diff for NuGet or GitHub Actions updates.
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v05fe4576374b728f0c523d6a13d64c25081e0803 # v4.8.3
+        with:
+          # Security Threshold Gate:
+          # The status check will completely fail (Red X) if any added or modified package
+          # contains a known vulnerability categorized as Moderate, High, or Critical severity.
+          fail-on-severity: moderate
+          
+          # Interactive PR Reporting:
+          # Instructs the runner to dynamically write a comprehensive markdown comment layout
+          # right inside the PR timeline, allowing reviewers to visualize safe vs unsafe shifts instantly.
+          comment-summary-in-pr: always
