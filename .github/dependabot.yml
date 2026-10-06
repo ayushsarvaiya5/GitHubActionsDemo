@@ -1,3 +1,9 @@
+# If wants to mannually run updates 
+# then go to "Insights" tab of the repository, 
+# then click on "Dependency graph" in the left sidebar, 
+# then click on "Dependabot" tab, 
+# then click on "Recent update jobs" and click on "Check for updates" button.
+
 version: 2
 
 updates:
