@@ -72,7 +72,7 @@ jobs:
       # Step 1: Checkout the Codebase
       # Pulls down your repository files so the environment can parse package configuration adjustments.
       - name: Checkout repository
-        uses: actions/checkout@1e31de5234b9f8995739874a8ce0492dc87873e2 # v4.0.0
+        uses: actions/checkout@v1e31de5234b9f8995739874a8ce0492dc87873e2 # v4.0.0
 
       # Step 2: Perform the Dependency Review Scan
       # Inspects the pull request diff for NuGet or GitHub Actions updates.
