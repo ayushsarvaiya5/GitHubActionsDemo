@@ -233,3 +233,49 @@ jobs:
           git add k8s/kustomization.yaml
           git commit -m "chore: update Kubernetes image to ${VERSION} [skip ci]"
           git push origin HEAD:${GITHUB_REF_NAME}
+
+  # ============================================================
+  # 6. SEND EMAIL NOTIFICATION
+  #
+  # Always runs last (even if earlier jobs failed) and reports the
+  # overall build status plus links to the produced artifacts
+  # (GitHub Actions run, Docker image tag, GitHub release).
+  #
+  # Uses the reusable .github/actions/send-build-notification
+  # composite action so the same notification logic can be shared
+  # across other workflows.
+  # ============================================================
+  notify:
+
+    needs:
+      - check-branch
+      - test-and-build
+      - release-please
+      - push-docker-image
+      - update-kubernetes-version
+
+    if: always()
+
+    runs-on: [GitHubActionsDemo-runner, self-hosted, Linux, X64]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Send build notification email
+        uses: ./.github/actions/send-build-notification
+        with:
+          app-name: GitHubActionsDemo
+          recipient: ayushsarvaiya5@gmail.com
+          mail-username: ${{ secrets.MAIL_USERNAME }}
+          mail-password: ${{ secrets.MAIL_PASSWORD }}
+          job-results: |
+            check-branch=${{ needs.check-branch.result }}
+            test-and-build=${{ needs.test-and-build.result }}
+            release-please=${{ needs.release-please.result }}
+            push-docker-image=${{ needs.push-docker-image.result }}
+            update-kubernetes-version=${{ needs.update-kubernetes-version.result }}
+          release-tag: ${{ needs.release-please.outputs.tag_name }}
+          image-version: ${{ needs.release-please.outputs.version }}
+          dockerhub-username: ${{ secrets.DOCKERHUB_USERNAME }}
+          dockerhub-image: githubactionsdemo

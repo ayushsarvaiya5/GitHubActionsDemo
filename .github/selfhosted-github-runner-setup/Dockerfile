@@ -30,6 +30,7 @@ RUN apt-get update && \
         ca-certificates \
         curl \
         git \
+        jq \
         unzip \
         tzdata \
         docker.io \

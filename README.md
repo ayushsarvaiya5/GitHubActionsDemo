@@ -420,17 +420,40 @@ Copy the template file and update values:
 cp .github/selfhosted-github-runner-setup/.env.template .github/selfhosted-github-runner-setup/.env
 ```
 
-Then edit the .env file with your GitHub repository URL, runner token, labels, and runner version.
+Then edit the `.env` file with your GitHub repository URL, a `GITHUB_PAT` (see below), labels, and runner version.
+
+The container itself calls the GitHub REST API at startup to automatically request a short-lived runner registration token, and again at shutdown to request a removal token to deregister the runner. The `GITHUB_PAT` is only used for these two API calls and is never written to disk.
+
+### How to generate the `GITHUB_PAT` (fine-grained PAT, recommended)
+
+1. Go to GitHub -> click your profile photo -> **Settings**.
+2. In the left sidebar, go to **Developer settings**.
+3. Click **Personal access tokens** -> **Fine-grained tokens**.
+4. Click **Generate new token**.
+5. Fill in the token details:
+   - **Token name**: e.g. `selfhosted-runner-githubactionsdemo`
+   - **Expiration**: choose a duration
+   - **Resource owner**: your account (e.g. `ayushsarvaiya5`)
+   - **Repository access**: select **Only select repositories** and choose `GitHubActionsDemo`
+6. Under **Permissions -> Repository permissions**, set:
+   - **Administration**: Read and write (this is what lets it manage self-hosted runners)
+7. Click **Generate token** and copy the value shown (it will not be shown again).
+8. Paste the copied value into `GITHUB_PAT` in `.github/selfhosted-github-runner-setup/.env`.
+9. When the token nears its expiration date, repeat these steps to generate a new token and update `.env`.
+
+Alternative - classic PAT: **Settings -> Developer settings -> Personal access tokens -> Tokens (classic) -> Generate new token**, then check the **`repo`** scope (or **`admin:org`** for organization-owned runners). Note that a classic PAT with `repo` scope grants access to all of your repositories, not just this one, so the fine-grained PAT above is recommended.
+
+> Treat this PAT like a password. Never commit `.env` to source control (it is already covered by `.gitignore`), and revoke/regenerate the token immediately if it is ever shared or exposed.
 
 ### Start runner
 
 ```bash
 cd .github/selfhosted-github-runner-setup
 chmod +x setup-runner.sh build-and-run.sh
-./setup-runner.sh
+./build-and-run.sh
 ```
 
-This sets up the GitHub self-hosted runner and starts it in the configured work folder.
+This builds the runner Docker image (if needed) and starts the container, which registers itself as a GitHub self-hosted runner using the API-fetched token. When the container stops, it automatically deregisters the runner from GitHub using a freshly requested removal token.
 
 ## Example API Calls
 
