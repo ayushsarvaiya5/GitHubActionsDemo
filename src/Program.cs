@@ -42,7 +42,7 @@ app.MapGet("/api/say-hello", () =>
     return Results.Ok(result);
 });
 
-app.MapGet("/api/say-bye-2.0", () =>
+app.MapGet("/api/say-bye-3.0", () =>
 {
     var result = "Goodbye, World!";
 
