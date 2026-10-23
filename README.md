@@ -256,6 +256,7 @@ This workflow shows how a successful build can be turned into a deployment artif
 - runs [release-please](https://github.com/googleapis/release-please-action) on `main` to open/update a Release PR and, once that PR is merged, create the Git tag and GitHub release
 - publishes a Docker image to Docker Hub, tagged with the released version, only after a release is created
 - updates the Kubernetes manifest (`k8s/kustomization.yaml`) with the new image version
+- sends an HTML build status email (with job results and artifact links) once the pipeline finishes, via the reusable `.github/actions/send-build-notification` action
 - only runs the release/publish steps on the main branch
 
 Required GitHub secrets:
@@ -263,6 +264,8 @@ Required GitHub secrets:
 - DOCKERHUB_USERNAME
 - DOCKERHUB_TOKEN
 - RELEASE_PLEASE_TOKEN
+- MAIL_USERNAME
+- MAIL_PASSWORD
 
 ### How to generate and store these secrets
 
@@ -305,6 +308,23 @@ Required GitHub secrets:
 Store these secrets at the repository level (or organization level if you manage shared secrets). They are used by the workflow in `.github/workflows/push-docker-image-publish.yml` to authenticate and push the Docker image, and to let release-please open release pull requests.
 
 > Note: `RELEASE_PLEASE_TOKEN` must be a Personal Access Token, not the default `GITHUB_TOKEN`. GitHub blocks the default token from creating pull requests unless "Allow GitHub Actions to create and approve pull requests" is enabled in Settings -> Actions -> General, and even then, PRs/tags created by `GITHUB_TOKEN` do not trigger other workflows.
+
+### How to create `MAIL_USERNAME` and `MAIL_PASSWORD` (email build notifications)
+
+The `notify` job sends a build status email using Gmail SMTP via [dawidd6/action-send-mail](https://github.com/dawidd6/action-send-mail). It authenticates with a Gmail address and an **App Password** (not your normal Gmail password).
+
+1. Make sure the Gmail account you want to send from has **2-Step Verification** enabled:
+   - Go to [Google Account Security](https://myaccount.google.com/security)
+   - Under "How you sign in to Google", turn on **2-Step Verification** (required before App Passwords can be created).
+2. Generate an App Password:
+   - Go to [Google App Passwords](https://myaccount.google.com/apppasswords)
+   - Under "App name", enter something like `GitHub Actions` and click **Create**
+   - Google generates a 16-character password (e.g. `abcd efgh ijkl mnop`) — copy it **without spaces**
+3. In GitHub, go to **Settings -> Secrets and variables -> Actions -> New repository secret** and add:
+   - Name: `MAIL_USERNAME`  Value: the Gmail address you generated the App Password for (e.g. `your@gmail.com`)
+   - Name: `MAIL_PASSWORD`  Value: the 16-character App Password from step 2
+
+This account is used both as the SMTP login and as the `From:` address of the notification email. The recipient address is configured directly in the workflow (`recipient:` input of the `send-build-notification` action) rather than as a secret.
 
 This is the core demonstration of the repository: GitHub Actions as the automation layer for a .NET app.
 

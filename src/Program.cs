@@ -42,6 +42,13 @@ app.MapGet("/api/say-hello", () =>
     return Results.Ok(result);
 });
 
+app.MapGet("/api/say-bye", () =>
+{
+    var result = "Goodbye, World!";
+
+    return Results.Ok(result);
+});
+
 // Failing case for CodeQL analysis
 
 // CodeQL demonstration: intentionally vulnerable code

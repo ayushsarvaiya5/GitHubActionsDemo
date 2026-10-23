@@ -220,7 +220,8 @@ runs:
         secure: true
         username: ${{ inputs.mail-username }}
         password: ${{ inputs.mail-password }}
-        from: GitHub Actions - ${{ inputs.app-name }} <${{ inputs.mail-username }}>
+        from: "\"GitHub Actions - ${{ inputs.app-name }}\" <${{ inputs.mail-username }}>"
+        envelope_from: ${{ inputs.mail-username }}
         to: ${{ inputs.recipient }}
         subject: "[${{ inputs.app-name }}] Build ${{ steps.status.outputs.status }} - ${{ github.ref_name }}"
         convert_markdown: false
