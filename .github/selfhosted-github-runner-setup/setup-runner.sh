@@ -87,11 +87,16 @@ if [ ! -f "$RUNNER_PACKAGE" ]; then
     echo "Version : $RUNNER_VERSION"
     echo "Arch    : $RUNNER_ARCH"
 
-    curl -4 -fL \
-        --resolve release-assets.githubusercontent.com:443:185.199.108.133 \
+    # curl -4 -fL \
+    #     --resolve release-assets.githubusercontent.com:443:185.199.108.133 \
+    #     -o "$RUNNER_PACKAGE" \
+    #     "$RUNNER_DOWNLOAD_URL"
+
+    curl -fL \
+        --retry 3 \
+        --connect-timeout 20 \
         -o "$RUNNER_PACKAGE" \
         "$RUNNER_DOWNLOAD_URL"
-
 else
 
     echo "Runner package already exists."

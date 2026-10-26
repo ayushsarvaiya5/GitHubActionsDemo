@@ -22,28 +22,34 @@ jobs:
       #   with:
       #     dotnet-version: '10.0.x'
 
-      - name: Cache NuGet packages
-        id: nuget-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 #v6.1.0
-        with:
-          path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/packages.lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
+      # actions/cache : uses GitHub Actions' cloud-based cache service.
+      # Since this workflow runs on a self-hosted runner, cached NuGet packages are still downloaded from GitHub's cloud cache to the runner's local disk.
+      # This may be less efficient due to network transfer and cache restore overhead.
+      # For self-hosted runners, consider using a persistent local NuGet cache instead.
+      # For GitHub-hosted runners, actions/cache is generally a good choice because it avoids repeatedly downloading dependencies from NuGet feeds.
 
-      - name: Show NuGet cache status
-        run: |
-          echo "=========================================="
-          echo " NuGet Cache"
-          echo "=========================================="
-          echo "Key: ${{ steps.nuget-cache.outputs.cache-primary-key }}"
-          echo "Exact cache hit: ${{ steps.nuget-cache.outputs.cache-hit }}"
+      # - name: Cache NuGet packages
+      #   id: nuget-cache
+      #   uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 #v6.1.0
+      #   with:
+      #     path: ~/.nuget/packages
+      #     key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/packages.lock.json') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-nuget-
 
-          if [ "${{ steps.nuget-cache.outputs.cache-hit }}" = "true" ]; then
-            echo "RESULT: EXACT CACHE HIT"
-          else
-            echo "RESULT: EXACT CACHE MISS"
-          fi
+      # - name: Show NuGet cache status
+      #   run: |
+      #     echo "=========================================="
+      #     echo " NuGet Cache"
+      #     echo "=========================================="
+      #     echo "Key: ${{ steps.nuget-cache.outputs.cache-primary-key }}"
+      #     echo "Exact cache hit: ${{ steps.nuget-cache.outputs.cache-hit }}"
+
+      #     if [ "${{ steps.nuget-cache.outputs.cache-hit }}" = "true" ]; then
+      #       echo "RESULT: EXACT CACHE HIT"
+      #     else
+      #       echo "RESULT: EXACT CACHE MISS"
+      #     fi
 
       - name: Restore dependencies
         run: |

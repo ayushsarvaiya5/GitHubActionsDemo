@@ -183,8 +183,8 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/githubactionsdemo:${{ needs.release-please.outputs.version }}
             ${{ secrets.DOCKERHUB_USERNAME }}/githubactionsdemo:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
 
   # ============================================================
   # 5. UPDATE KUBERNETES IMAGE VERSION
