@@ -6,4 +6,4 @@ resources:
 
 images:
   - name: ayushisar110/githubactionsdemo
-    newTag: 4.0.0
+    newTag: 5.0.0

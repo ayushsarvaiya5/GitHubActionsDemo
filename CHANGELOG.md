@@ -1,5 +1,24 @@
 # Changelog
 
+## [5.0.0](https://github.com/ayushsarvaiya5/GitHubActionsDemo/compare/v4.0.0...v5.0.0) (2026-10-23)
+
+
+### ⚠ BREAKING CHANGES
+
+* some changes
+
+### Features
+
+* good bye ([1a47f0b](https://github.com/ayushsarvaiya5/GitHubActionsDemo/commit/1a47f0ba66675b5473efbcf559b617caa0a6c9ab))
+* new code and ci changes ([c19ad63](https://github.com/ayushsarvaiya5/GitHubActionsDemo/commit/c19ad634ff8a22934ad892d63f1fa1758d885c41))
+* some changes ([24bd654](https://github.com/ayushsarvaiya5/GitHubActionsDemo/commit/24bd65457f42b98337e688f007e70035cdf5110e))
+
+
+### Bug Fixes
+
+* new code added ([ec79654](https://github.com/ayushsarvaiya5/GitHubActionsDemo/commit/ec796548c49284b57350c62e876ce38a9d6ccd65))
+* new code added ([6198ecb](https://github.com/ayushsarvaiya5/GitHubActionsDemo/commit/6198ecb5cba242ba6bb4bb4767485481609960cf))
+
 ## [4.0.0](https://github.com/ayushsarvaiya5/GitHubActionsDemo/compare/v3.0.0...v4.0.0) (2026-10-01)
 
 
