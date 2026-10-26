@@ -42,8 +42,10 @@ permissions:
 jobs:
 
   codeql:
-
     name: CodeQL Security Analysis
+
+    # Skips the CodeQL analysis for Dependabot PRs to avoid unnecessary processing as it will only the update package versions and not introduce any new code or logic. so we skip it.
+    if: github.event_name != 'pull_request' || github.event.pull_request.user.login != 'dependabot[bot]'
 
     runs-on: [GitHubActionsDemo-runner, self-hosted, Linux, X64]
 
