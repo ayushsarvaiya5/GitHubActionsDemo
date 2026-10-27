@@ -1,0 +1,25 @@
+{{/*
+Canary deployment: a small, separate Deployment running alongside the
+stable Deployment (or ignored while blueGreen.enabled, see service.yaml).
+The Service selector has no track filter, so Kubernetes load-balances
+across stable + canary pods proportionally to their replica counts
+(e.g. stable replicaCount=9, canary replicaCount=1 ≈ 10% of traffic).
+*/}}
+{{- if and .Values.canary.enabled (not .Values.blueGreen.enabled) }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "githubactionsdemo.fullname" . }}-canary
+  namespace: {{ include "githubactionsdemo.namespace" . }}
+  labels:
+    {{- include "githubactionsdemo.labels" . | nindent 4 }}
+    app.kubernetes.io/track: canary
+spec:
+  replicas: {{ .Values.canary.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "githubactionsdemo.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/track: canary
+  template:
+    {{- include "githubactionsdemo.podTemplate" (dict "root" . "imageTag" .Values.canary.image.tag "resources" .Values.canary.resources "extraLabels" (dict "app.kubernetes.io/track" "canary")) | nindent 4 }}
+{{- end }}

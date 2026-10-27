@@ -187,7 +187,319 @@ jobs:
           # cache-to: type=gha,mode=max
 
   # ============================================================
-  # 5. UPDATE KUBERNETES IMAGE VERSION
+  # 5. PROGRESSIVE CANARY ROLLOUT (AUTOMATED HEALTH GATE PER STAGE)
+  #
+  # Runs only when Release Please created a new release and the image was
+  # pushed successfully. Gradually shifts traffic to the new version in
+  # stages — 10% -> 20% -> 30% -> 40% -> 50% — by scaling the canary
+  # Deployment up and the stable Deployment down at each step (Helm chart:
+  # helm/githubactionsdemo, canary.* values — see
+  # templates/deployment-canary.yaml). The Service load-balances across
+  # stable + canary pods with no selector distinction, so the replica
+  # ratio at each stage is the actual traffic split.
+  #
+  # Health gate: after each stage, waits for both Deployments to roll out,
+  # bakes for CANARY_STAGE_BAKE_SECONDS, then fails the job (aborting the
+  # rollout) if any canary pod restarted, is not Ready, or logged more
+  # than (CANARY_MAX_ERROR_LOGS_PER_REPLICA x canary replica count) lines
+  # matching an error/exception pattern during the bake window — i.e. the
+  # threshold scales with traffic, staying strict at 10% and proportionally
+  # more tolerant at 50%. Reaching 50% successfully hands off to
+  # promote-bluegreen, which completes the cut to 100% new version via an
+  # instant blue/green slot swap.
+  #
+  # TOTAL_REPLICAS is fixed at 10 for this rollout so each percentage
+  # stage maps to a whole number of replicas (10%->1, 20%->2, ...).
+  #
+  # Requires a KUBE_CONFIG repository secret (base64-encoded kubeconfig)
+  # with access to the target cluster/namespace.
+  # ============================================================
+  canary-deploy:
+
+    needs:
+      - release-please
+      - push-docker-image
+
+    if: |
+      needs.release-please.result == 'success' &&
+      needs.push-docker-image.result == 'success' &&
+      needs.release-please.outputs.release_created == 'true'
+
+    runs-on: [GitHubActionsDemo-runner, self-hosted, Linux, X64]
+
+    env:
+      NAMESPACE: githubactionsdemo-prod
+      RELEASE_NAME: githubactionsdemo-prod
+      VERSION: ${{ needs.release-please.outputs.version }}
+      TOTAL_REPLICAS: 10
+      CANARY_STAGES: "10 20 30 40 50"
+      CANARY_STAGE_BAKE_SECONDS: 45
+      # Max allowed error/exception log lines PER CANARY REPLICA during the
+      # bake window. The actual threshold for a stage is this value times
+      # the canary replica count at that stage, so early low-traffic stages
+      # (e.g. 1 replica) stay strict while later higher-traffic stages
+      # (e.g. 5 replicas) tolerate proportionally more log volume.
+      CANARY_MAX_ERROR_LOGS_PER_REPLICA: 2
+      CANARY_ERROR_LOG_PATTERN: "error|exception|fatal|critical"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p "$HOME/.kube"
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > "$HOME/.kube/config"
+          echo "KUBECONFIG=$HOME/.kube/config" >> "$GITHUB_ENV"
+
+      - name: Progressive canary rollout (10% -> 50%)
+        run: |
+          set -euo pipefail
+
+          for PCT in ${CANARY_STAGES}; do
+            CANARY_REPLICAS=$(( TOTAL_REPLICAS * PCT / 100 ))
+            STABLE_REPLICAS=$(( TOTAL_REPLICAS - CANARY_REPLICAS ))
+
+            echo "=========================================="
+            echo " Canary stage: ${PCT}% (canary=${CANARY_REPLICAS}, stable=${STABLE_REPLICAS})"
+            echo "=========================================="
+
+            helm upgrade --install "${RELEASE_NAME}" ./helm/githubactionsdemo \
+              -f ./helm/githubactionsdemo/values-production.yaml \
+              --namespace "${NAMESPACE}" --create-namespace \
+              --set autoscaling.enabled=false \
+              --set canary.enabled=true \
+              --set canary.image.tag="${VERSION}" \
+              --set canary.replicaCount="${CANARY_REPLICAS}" \
+              --set replicaCount="${STABLE_REPLICAS}" \
+              --wait --timeout 5m
+
+            kubectl rollout status deployment/"${RELEASE_NAME}-canary" \
+              -n "${NAMESPACE}" --timeout=180s
+            kubectl rollout status deployment/"${RELEASE_NAME}" \
+              -n "${NAMESPACE}" --timeout=180s
+
+            echo "Baking for ${CANARY_STAGE_BAKE_SECONDS}s to catch crash loops..."
+            sleep "${CANARY_STAGE_BAKE_SECONDS}"
+
+            echo "Checking canary pod readiness and restart counts at ${PCT}%..."
+            kubectl get pods -n "${NAMESPACE}" -l app.kubernetes.io/track=canary -o wide
+
+            RESTARTS=$(kubectl get pods -n "${NAMESPACE}" -l app.kubernetes.io/track=canary \
+              -o jsonpath='{.items[*].status.containerStatuses[0].restartCount}')
+            for r in $RESTARTS; do
+              if [ "$r" -gt 0 ]; then
+                echo "::error::Canary pod restarted (${r} times) at ${PCT}% — aborting rollout."
+                exit 1
+              fi
+            done
+
+            READY=$(kubectl get pods -n "${NAMESPACE}" -l app.kubernetes.io/track=canary \
+              -o jsonpath='{.items[*].status.containerStatuses[0].ready}')
+            for ready in $READY; do
+              if [ "$ready" != "true" ]; then
+                echo "::error::Canary pod is not Ready at ${PCT}% — aborting rollout."
+                exit 1
+              fi
+            done
+
+            echo "Scanning canary logs for errors/exceptions at ${PCT}%..."
+            CANARY_MAX_ERROR_LOGS=$(( CANARY_MAX_ERROR_LOGS_PER_REPLICA * CANARY_REPLICAS ))
+            ERROR_LOG_COUNT=$(kubectl logs -n "${NAMESPACE}" -l app.kubernetes.io/track=canary \
+              --all-containers --prefix \
+              --since="${CANARY_STAGE_BAKE_SECONDS}s" 2>/dev/null \
+              | grep -E -i -c "${CANARY_ERROR_LOG_PATTERN}" || true)
+            echo "Found ${ERROR_LOG_COUNT} matching log line(s) (threshold: ${CANARY_MAX_ERROR_LOGS} = ${CANARY_MAX_ERROR_LOGS_PER_REPLICA}/replica x ${CANARY_REPLICAS} replicas)."
+
+            if [ "${ERROR_LOG_COUNT}" -gt "${CANARY_MAX_ERROR_LOGS}" ]; then
+              echo "::error::Canary logged ${ERROR_LOG_COUNT} error/exception line(s) at ${PCT}% (threshold ${CANARY_MAX_ERROR_LOGS}) — aborting rollout."
+              kubectl logs -n "${NAMESPACE}" -l app.kubernetes.io/track=canary \
+                --all-containers --prefix --since="${CANARY_STAGE_BAKE_SECONDS}s" 2>/dev/null \
+                | grep -E -i "${CANARY_ERROR_LOG_PATTERN}" | tail -n 50
+              exit 1
+            fi
+
+            echo "Stage ${PCT}% healthy."
+          done
+
+          echo "Canary ${VERSION} reached 50/50 and is healthy — ready for full promotion."
+
+  # ============================================================
+  # 6. PROMOTE: FULL BLUE-GREEN DEPLOYMENT + CUTOVER
+  #
+  # Runs only after the canary passes its health gate. Deploys the new
+  # version at full scale into the currently idle blue/green slot
+  # (Helm chart: helm/githubactionsdemo, blueGreen.* values — see
+  # templates/deployment-bluegreen.yaml), verifies it, then flips the
+  # Service to that slot (instant, zero-downtime cutover). The canary
+  # Deployment is torn down once the stable version catches up.
+  # ============================================================
+  promote-bluegreen:
+
+    needs:
+      - release-please
+      - canary-deploy
+
+    if: needs.canary-deploy.result == 'success'
+
+    runs-on: [GitHubActionsDemo-runner, self-hosted, Linux, X64]
+
+    env:
+      NAMESPACE: githubactionsdemo-prod
+      RELEASE_NAME: githubactionsdemo-prod
+      VERSION: ${{ needs.release-please.outputs.version }}
+      TOTAL_REPLICAS: 10
+      PROMOTE_BAKE_SECONDS: 60
+      # Same per-replica basis as canary-deploy's CANARY_MAX_ERROR_LOGS_PER_REPLICA,
+      # applied across all TOTAL_REPLICAS pods in the idle slot.
+      CANARY_MAX_ERROR_LOGS_PER_REPLICA: 2
+      CANARY_ERROR_LOG_PATTERN: "error|exception|fatal|critical"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p "$HOME/.kube"
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > "$HOME/.kube/config"
+          echo "KUBECONFIG=$HOME/.kube/config" >> "$GITHUB_ENV"
+
+      - name: Determine active and idle slots
+        run: |
+          ACTIVE_SLOT=$(helm get values "${RELEASE_NAME}" -n "${NAMESPACE}" -o json \
+            | jq -r '.blueGreen.activeSlot // "blue"')
+          if [ "${ACTIVE_SLOT}" = "blue" ]; then
+            IDLE_SLOT="green"
+          else
+            IDLE_SLOT="blue"
+          fi
+          echo "Active slot : ${ACTIVE_SLOT}"
+          echo "Idle slot   : ${IDLE_SLOT}"
+          echo "ACTIVE_SLOT=${ACTIVE_SLOT}" >> "$GITHUB_ENV"
+          echo "IDLE_SLOT=${IDLE_SLOT}" >> "$GITHUB_ENV"
+
+      - name: Deploy new version to idle slot
+        run: |
+          helm upgrade --install "${RELEASE_NAME}" ./helm/githubactionsdemo \
+            -f ./helm/githubactionsdemo/values-production.yaml \
+            --namespace "${NAMESPACE}" --create-namespace \
+            --set blueGreen.enabled=true \
+            --set blueGreen.activeSlot="${ACTIVE_SLOT}" \
+            --set blueGreen.${IDLE_SLOT}.image.tag="${VERSION}" \
+            --set blueGreen.${IDLE_SLOT}.replicaCount="${TOTAL_REPLICAS}" \
+            --wait --timeout 5m
+
+      - name: Wait for idle slot rollout
+        run: |
+          kubectl rollout status deployment/"${RELEASE_NAME}-${IDLE_SLOT}" \
+            -n "${NAMESPACE}" --timeout=180s
+
+      - name: Bake and health-check idle slot pods
+        run: |
+          echo "Baking for ${PROMOTE_BAKE_SECONDS}s to catch crash loops..."
+          sleep "${PROMOTE_BAKE_SECONDS}"
+
+          kubectl get pods -n "${NAMESPACE}" -l app.kubernetes.io/slot="${IDLE_SLOT}" -o wide
+
+          RESTARTS=$(kubectl get pods -n "${NAMESPACE}" -l app.kubernetes.io/slot="${IDLE_SLOT}" \
+            -o jsonpath='{.items[*].status.containerStatuses[0].restartCount}')
+          for r in $RESTARTS; do
+            if [ "$r" -gt 0 ]; then
+              echo "::error::${IDLE_SLOT} slot pod restarted ($r times) — aborting cutover."
+              exit 1
+            fi
+          done
+
+          echo "Scanning ${IDLE_SLOT} slot logs for errors/exceptions..."
+          CANARY_MAX_ERROR_LOGS=$(( CANARY_MAX_ERROR_LOGS_PER_REPLICA * TOTAL_REPLICAS ))
+          ERROR_LOG_COUNT=$(kubectl logs -n "${NAMESPACE}" -l app.kubernetes.io/slot="${IDLE_SLOT}" \
+            --all-containers --prefix \
+            --since="${PROMOTE_BAKE_SECONDS}s" 2>/dev/null \
+            | grep -E -i -c "${CANARY_ERROR_LOG_PATTERN}" || true)
+          echo "Found ${ERROR_LOG_COUNT} matching log line(s) (threshold: ${CANARY_MAX_ERROR_LOGS} = ${CANARY_MAX_ERROR_LOGS_PER_REPLICA}/replica x ${TOTAL_REPLICAS} replicas)."
+
+          if [ "${ERROR_LOG_COUNT}" -gt "${CANARY_MAX_ERROR_LOGS}" ]; then
+            echo "::error::${IDLE_SLOT} slot logged ${ERROR_LOG_COUNT} error/exception line(s) (threshold ${CANARY_MAX_ERROR_LOGS}) — aborting cutover."
+            kubectl logs -n "${NAMESPACE}" -l app.kubernetes.io/slot="${IDLE_SLOT}" \
+              --all-containers --prefix --since="${PROMOTE_BAKE_SECONDS}s" 2>/dev/null \
+              | grep -E -i "${CANARY_ERROR_LOG_PATTERN}" | tail -n 50
+            exit 1
+          fi
+
+      - name: Cut traffic over to idle slot
+        run: |
+          echo "Switching active slot: ${ACTIVE_SLOT} -> ${IDLE_SLOT}"
+          helm upgrade --install "${RELEASE_NAME}" ./helm/githubactionsdemo \
+            -f ./helm/githubactionsdemo/values-production.yaml \
+            --namespace "${NAMESPACE}" \
+            --set blueGreen.enabled=true \
+            --set blueGreen.activeSlot="${IDLE_SLOT}" \
+            --set blueGreen.${IDLE_SLOT}.image.tag="${VERSION}" \
+            --set blueGreen.${IDLE_SLOT}.replicaCount="${TOTAL_REPLICAS}" \
+            --wait --timeout 5m
+
+      - name: Remove canary now that the new version is promoted
+        run: |
+          helm upgrade --install "${RELEASE_NAME}" ./helm/githubactionsdemo \
+            -f ./helm/githubactionsdemo/values-production.yaml \
+            --namespace "${NAMESPACE}" \
+            --set blueGreen.enabled=true \
+            --set blueGreen.activeSlot="${IDLE_SLOT}" \
+            --set blueGreen.${IDLE_SLOT}.image.tag="${VERSION}" \
+            --set blueGreen.${IDLE_SLOT}.replicaCount="${TOTAL_REPLICAS}" \
+            --set canary.enabled=false \
+            --wait --timeout 5m
+
+  # ============================================================
+  # 7. AUTOMATIC ROLLBACK ON FAILURE
+  #
+  # Runs only if the canary health gate or the blue-green promotion
+  # failed. Disables the canary Deployment so production traffic only
+  # ever reaches the last known-good stable/active-slot version — no
+  # manual intervention required to stop the bleeding.
+  # ============================================================
+  rollback-on-failure:
+
+    needs:
+      - release-please
+      - canary-deploy
+      - promote-bluegreen
+
+    if: |
+      needs.release-please.outputs.release_created == 'true' &&
+      (needs.canary-deploy.result == 'failure' || needs.promote-bluegreen.result == 'failure')
+
+    runs-on: [GitHubActionsDemo-runner, self-hosted, Linux, X64]
+
+    env:
+      NAMESPACE: githubactionsdemo-prod
+      RELEASE_NAME: githubactionsdemo-prod
+      TOTAL_REPLICAS: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p "$HOME/.kube"
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > "$HOME/.kube/config"
+          echo "KUBECONFIG=$HOME/.kube/config" >> "$GITHUB_ENV"
+
+      - name: Disable canary and restore stable replica count
+        run: |
+          helm upgrade "${RELEASE_NAME}" ./helm/githubactionsdemo \
+            -f ./helm/githubactionsdemo/values-production.yaml \
+            --namespace "${NAMESPACE}" --reuse-values \
+            --set canary.enabled=false \
+            --set autoscaling.enabled=true \
+            --set replicaCount="${TOTAL_REPLICAS}" \
+            --wait --timeout 5m
+          echo "::warning::Rolled back canary for ${RELEASE_NAME}; active slot/stable version unchanged."
+
+  # ============================================================
+  # 8. UPDATE KUBERNETES IMAGE VERSION
   # ============================================================
   update-kubernetes-version:
 
@@ -252,6 +564,9 @@ jobs:
       - test-and-build
       - release-please
       - push-docker-image
+      - canary-deploy
+      - promote-bluegreen
+      - rollback-on-failure
       - update-kubernetes-version
 
     if: always()
@@ -274,6 +589,9 @@ jobs:
             test-and-build=${{ needs.test-and-build.result }}
             release-please=${{ needs.release-please.result }}
             push-docker-image=${{ needs.push-docker-image.result }}
+            canary-deploy=${{ needs.canary-deploy.result }}
+            promote-bluegreen=${{ needs.promote-bluegreen.result }}
+            rollback-on-failure=${{ needs.rollback-on-failure.result }}
             update-kubernetes-version=${{ needs.update-kubernetes-version.result }}
           release-tag: ${{ needs.release-please.outputs.tag_name }}
           image-version: ${{ needs.release-please.outputs.version }}

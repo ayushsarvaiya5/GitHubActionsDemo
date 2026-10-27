@@ -1,0 +1,155 @@
+# Default values for githubactionsdemo.
+# These are the baseline/development-like defaults. Override per
+# environment with values-development.yaml, values-staging.yaml or
+# values-production.yaml, e.g.:
+#   helm upgrade --install githubactionsdemo ./helm/githubactionsdemo \
+#     -f ./helm/githubactionsdemo/values-production.yaml \
+#     --namespace githubactionsdemo-prod --create-namespace
+
+replicaCount: 1
+
+image:
+  repository: ayushisar110/githubactionsdemo
+  pullPolicy: IfNotPresent
+  tag: "5.0.0"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Logical environment name, exposed as ASPNETCORE_ENVIRONMENT and used in labels.
+environment: Development
+
+namespace:
+  create: false
+  name: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 8080
+  targetPort: http
+
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  host: githubactionsdemo.local
+  path: /
+  pathType: Prefix
+  tls: []
+  # tls:
+  #   - secretName: githubactionsdemo-tls
+  #     hosts:
+  #       - githubactionsdemo.local
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+
+probes:
+  readiness:
+    path: /
+    initialDelaySeconds: 5
+    periodSeconds: 10
+  liveness:
+    path: /
+    initialDelaySeconds: 15
+    periodSeconds: 20
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Plain (non-sensitive) configuration, rendered into a ConfigMap and
+# mounted into the container as environment variables.
+config:
+  ASPNETCORE_URLS: "http://+:8080"
+  Logging__LogLevel__Default: "Information"
+  Logging__LogLevel__Microsoft.AspNetCore: "Warning"
+  AllowedHosts: "*"
+
+# Sensitive configuration, rendered into a Secret. Do NOT commit real
+# values in values files committed to source control — supply them via
+# --set-string or a separate, untracked values file / secret manager instead.
+secret:
+  enabled: true
+  data: {}
+  # data:
+  #   ConnectionStrings__Default: "change-me"
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
+# Blue-Green deployment: two full-size Deployments ("blue" and "green")
+# always exist; the Service only routes to whichever slot matches
+# activeSlot. Switch live traffic instantly with, e.g.:
+#   helm upgrade githubactionsdemo ./helm/githubactionsdemo --reuse-values \
+#     --set blueGreen.activeSlot=green
+# Mutually exclusive with the default stable Deployment (deployment.yaml
+# is skipped while this is enabled) and with canary (see below).
+blueGreen:
+  enabled: false
+  activeSlot: blue # blue | green — whichever slot the Service sends traffic to
+  blue:
+    replicaCount: 1
+    image:
+      tag: "" # falls back to image.tag / Chart.AppVersion if empty
+  green:
+    replicaCount: 1
+    image:
+      tag: ""
+
+# Canary deployment: a small extra Deployment running alongside the stable
+# one. The Service has no track selector, so traffic is split across
+# stable + canary pods proportionally to replica counts (e.g. stable
+# replicaCount=9, canary.replicaCount=1 ≈ 10% of traffic to the canary).
+# Ignored while blueGreen.enabled is true.
+canary:
+  enabled: false
+  replicaCount: 1
+  image:
+    tag: "" # set to the new version you want to canary; falls back to image.tag
+  resources: {} # falls back to the top-level resources if empty
+
+persistence:
+  enabled: false
+  # Set to true to also create a static PersistentVolume (e.g. hostPath,
+  # for single-node/dev clusters). Leave false when using a StorageClass
+  # with dynamic provisioning.
+  createVolume: false
+  storageClassName: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 1Gi
+  mountPath: /app/data
+  hostPath: /mnt/data/githubactionsdemo

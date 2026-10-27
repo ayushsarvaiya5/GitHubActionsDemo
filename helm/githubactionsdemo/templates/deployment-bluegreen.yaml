@@ -1,0 +1,29 @@
+{{/*
+Blue-Green deployment: two full Deployments ("blue" and "green") exist at
+all times. The Service only routes to whichever slot matches
+Values.blueGreen.activeSlot (see service.yaml), so cutting traffic over
+is just `helm upgrade --set blueGreen.activeSlot=green` (or vice versa) —
+no pods are deleted or recreated.
+*/}}
+{{- if .Values.blueGreen.enabled }}
+{{- range $slot := list "blue" "green" }}
+{{- $slotValues := index $.Values.blueGreen $slot }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "githubactionsdemo.fullname" $ }}-{{ $slot }}
+  namespace: {{ include "githubactionsdemo.namespace" $ }}
+  labels:
+    {{- include "githubactionsdemo.labels" $ | nindent 4 }}
+    app.kubernetes.io/slot: {{ $slot }}
+spec:
+  replicas: {{ $slotValues.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "githubactionsdemo.selectorLabels" $ | nindent 6 }}
+      app.kubernetes.io/slot: {{ $slot }}
+  template:
+    {{- include "githubactionsdemo.podTemplate" (dict "root" $ "imageTag" $slotValues.image.tag "extraLabels" (dict "app.kubernetes.io/slot" $slot)) | nindent 4 }}
+{{- end }}
+{{- end }}

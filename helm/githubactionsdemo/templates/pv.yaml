@@ -1,0 +1,19 @@
+{{- if and .Values.persistence.enabled .Values.persistence.createVolume }}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ include "githubactionsdemo.fullname" . }}-pv
+  labels:
+    {{- include "githubactionsdemo.labels" . | nindent 4 }}
+spec:
+  capacity:
+    storage: {{ .Values.persistence.size }}
+  accessModes:
+    {{- toYaml .Values.persistence.accessModes | nindent 4 }}
+  persistentVolumeReclaimPolicy: Retain
+  {{- if .Values.persistence.storageClassName }}
+  storageClassName: {{ .Values.persistence.storageClassName }}
+  {{- end }}
+  hostPath:
+    path: {{ .Values.persistence.hostPath }}
+{{- end }}

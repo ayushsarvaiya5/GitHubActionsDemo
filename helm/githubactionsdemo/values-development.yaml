@@ -1,0 +1,32 @@
+environment: Development
+
+replicaCount: 1
+
+image:
+  tag: "latest"
+  pullPolicy: Always
+
+namespace:
+  create: true
+  name: githubactionsdemo-dev
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 192Mi
+
+ingress:
+  enabled: true
+  host: githubactionsdemo.dev.local
+
+config:
+  ASPNETCORE_URLS: "http://+:8080"
+  Logging__LogLevel__Default: "Debug"
+  Logging__LogLevel__Microsoft.AspNetCore: "Information"
+  AllowedHosts: "*"
+
+autoscaling:
+  enabled: false

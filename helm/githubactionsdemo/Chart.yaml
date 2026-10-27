@@ -1,0 +1,12 @@
+apiVersion: v2
+name: githubactionsdemo
+description: Helm chart for the GitHubActionsDemo ASP.NET Core application
+type: application
+version: 0.1.0
+appVersion: "5.0.0"
+keywords:
+  - aspnetcore
+  - dotnet
+home: https://github.com/ayushisar110/GitHubActionsDemo
+maintainers:
+  - name: ayushisar110

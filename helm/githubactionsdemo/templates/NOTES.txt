@@ -1,0 +1,14 @@
+GitHubActionsDemo has been deployed ({{ .Values.environment }} environment)!
+
+Release:   {{ .Release.Name }}
+Namespace: {{ include "githubactionsdemo.namespace" . }}
+
+{{- if .Values.ingress.enabled }}
+
+Ingress host: http://{{ .Values.ingress.host }}{{ .Values.ingress.path }}
+{{- else }}
+
+To access the app, port-forward the Service:
+  kubectl port-forward -n {{ include "githubactionsdemo.namespace" . }} svc/{{ include "githubactionsdemo.fullname" . }} 8080:{{ .Values.service.port }}
+  curl http://localhost:8080/
+{{- end }}

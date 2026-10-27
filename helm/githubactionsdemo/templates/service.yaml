@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "githubactionsdemo.fullname" . }}
+  namespace: {{ include "githubactionsdemo.namespace" . }}
+  labels:
+    {{- include "githubactionsdemo.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    {{- include "githubactionsdemo.selectorLabels" . | nindent 4 }}
+    {{- if .Values.blueGreen.enabled }}
+    app.kubernetes.io/slot: {{ .Values.blueGreen.activeSlot }}
+    {{- end }}
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+      protocol: TCP

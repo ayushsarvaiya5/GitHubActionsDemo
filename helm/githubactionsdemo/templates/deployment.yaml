@@ -1,0 +1,25 @@
+{{/*
+Stable Deployment. Skipped when blueGreen.enabled is true, since
+deployment-bluegreen.yaml renders the blue/green Deployments instead.
+*/}}
+{{- if not .Values.blueGreen.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "githubactionsdemo.fullname" . }}
+  namespace: {{ include "githubactionsdemo.namespace" . }}
+  labels:
+    {{- include "githubactionsdemo.labels" . | nindent 4 }}
+    app.kubernetes.io/track: stable
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "githubactionsdemo.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/track: stable
+  template:
+    {{- include "githubactionsdemo.podTemplate" (dict "root" . "extraLabels" (dict "app.kubernetes.io/track" "stable")) | nindent 4 }}
+{{- end }}
+

@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: githubactionsdemo
+  namespace: githubactionsdemo
+  labels:
+    app.kubernetes.io/name: githubactionsdemo
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: githubactionsdemo.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: githubactionsdemo
+                port:
+                  name: http

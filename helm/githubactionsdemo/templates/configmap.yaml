@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "githubactionsdemo.fullname" . }}-config
+  namespace: {{ include "githubactionsdemo.namespace" . }}
+  labels:
+    {{- include "githubactionsdemo.labels" . | nindent 4 }}
+data:
+  ASPNETCORE_ENVIRONMENT: {{ .Values.environment | quote }}
+  {{- range $key, $value := .Values.config }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
